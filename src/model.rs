@@ -1,4 +1,4 @@
-use scroll::{ctx, Pread, Pwrite, LE, Endian, BE};
+use scroll::{ctx, Pread, Pwrite, LE, Endian};
 
 const MDLX_TAG: u32 = 1481393229;
 
@@ -9,7 +9,7 @@ const TEXS_TAG: u32 = 1398293844;
 const PIVT_TAG: u32 = 1414941008;
 
 pub fn read_mdx_file(data: Vec<u8>) {
-    let mut offset = &mut 0usize;
+    let offset = &mut 0usize;
     let mdlx_tag = data.gread_with::<u32>(offset, LE).unwrap();
     if mdlx_tag == MDLX_TAG {
         // Iterate over chunks
@@ -33,7 +33,7 @@ pub fn read_mdx_file(data: Vec<u8>) {
     }
 }
 
-pub fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::Error>{
+fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::Error> {
     match tag {
         VERS_TAG => {
             let version_chunk = data.gread_with::<VersionChunk>(offset, LE)?;
@@ -44,14 +44,16 @@ pub fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scrol
             dbg!(model_chunk);
         },
         SEQS_TAG => {
-            //let chunk_size = data.gread_with::<u32>(offset, LE)?;
-            //*offset += chunk_size as usize;
+            let sequence_chunk = data.gread_with::<SequenceChunk>(offset, LE)?;
+            dbg!(sequence_chunk);
         },
         TEXS_TAG => {
-
+            let texture_chunk = data.gread_with::<TextureChunk>(offset, LE)?;
+            dbg!(texture_chunk);
         },
         PIVT_TAG => {
-
+            let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
+            dbg!(pivot_chunk);
         },
         _ => {
             //let chunk_size = data.gread_with::<u32>(offset, LE)?;
@@ -131,11 +133,32 @@ impl ctx::TryFromCtx<'_, Endian> for ModelChunk {
 
 #[derive(PartialEq, Debug)]
 pub struct SequenceChunk {
-    pub seqs: u32,
     pub chunk_size: u32,
 
     // chunk_size / 132
     pub data: Vec<Sequence>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for SequenceChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut data = Vec::new();
+        if let Some(sequence_count) = u32::checked_div(chunk_size.clone(), 132) {
+            for _ in 0..sequence_count {
+                let sequence = src.gread_with::<Sequence>(offset, ctx)?;
+                data.push(sequence);
+            }
+        }
+
+        Ok((SequenceChunk {
+            chunk_size,
+            data,
+        }, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -150,6 +173,50 @@ pub struct Sequence {
     pub bounds_radius: f32,
     pub minimum_extent: [f32; 3],
     pub maximum_extent: [f32; 3],
+}
+
+impl ctx::TryFromCtx<'_, Endian> for Sequence {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        // Name has fixed size
+        let max_name_len = 80usize;
+        let name = src.gread::<&str>(&mut offset.clone())?.to_string();
+        *offset += max_name_len;
+
+        let interval_start = src.gread_with::<u32>(offset, ctx)?;
+        let interval_end = src.gread_with::<u32>(offset, ctx)?;
+        let move_speed = src.gread_with::<f32>(offset, ctx)?;
+        let non_looping = src.gread_with::<u32>(offset, ctx)?;
+        let rarity = src.gread_with::<f32>(offset, ctx)?;
+        let unknown = src.gread_with::<u32>(offset, ctx)?;
+        let bounds_radius = src.gread_with::<f32>(offset, ctx)?;
+        let minimum_extent = [
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+        ];
+        let maximum_extent = [
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+        ];
+
+        Ok((Sequence {
+            name,
+            interval_start,
+            interval_end,
+            move_speed,
+            non_looping,
+            rarity,
+            unknown,
+            bounds_radius,
+            minimum_extent,
+            maximum_extent,
+        }, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -168,11 +235,32 @@ pub struct GlobalSequence {
 
 #[derive(PartialEq, Debug)]
 pub struct TextureChunk {
-    pub texs: u32,
     pub chunk_size: u32,
 
     // chunk_size / 268
     pub data: Vec<Texture>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for TextureChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut data = Vec::new();
+        if let Some(texture_count) = u32::checked_div(chunk_size.clone(), 268) {
+            for _ in 0..texture_count {
+                let texture = src.gread_with::<Texture>(offset, ctx)?;
+                data.push(texture);
+            }
+        }
+
+        Ok((TextureChunk {
+            chunk_size,
+            data,
+        }, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -181,6 +269,30 @@ pub struct Texture {
     pub file_name: String,
     pub unknown: u32,
     pub flags: u32,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for Texture {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let replaceable_id = src.gread_with::<u32>(offset, ctx)?;
+
+        // Name has fixed size
+        let max_name_len = 256usize;
+        let file_name = src.gread::<&str>(&mut offset.clone())?.to_string();
+        *offset += max_name_len;
+
+        let unknown = src.gread_with::<u32>(offset, ctx)?;
+        let flags = src.gread_with::<u32>(offset, ctx)?;
+
+        Ok((Texture {
+            replaceable_id,
+            file_name,
+            unknown,
+            flags,
+        }, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -264,11 +376,32 @@ pub struct GeosetChunk {
 
 #[derive(PartialEq, Debug)]
 pub struct PivotPointChunk {
-    pub pivt: u32,
     pub chunk_size: u32,
 
     // chunk_size / 12
     pub data: Vec<PivotPoint>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for PivotPointChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut data = Vec::new();
+        if let Some(pivot_point_count) = u32::checked_div(chunk_size.clone(), 12) {
+            for _ in 0..pivot_point_count {
+                let pivot_point = src.gread_with::<PivotPoint>(offset, ctx)?;
+                data.push(pivot_point);
+            }
+        }
+
+        Ok((PivotPointChunk {
+            chunk_size,
+            data,
+        }, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -276,14 +409,28 @@ pub struct PivotPoint {
     pub position: [f32; 3],
 }
 
+impl ctx::TryFromCtx<'_, Endian> for PivotPoint {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let position = [
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+        ];
+
+        Ok((PivotPoint {
+            position,
+        }, *offset))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
-    use std::mem::size_of;
-    use std::fs::File;
-    use std::io::{BufReader, Read};
-    use scroll::IOread;
 
     #[test]
     fn read_mdx_file_api() {
