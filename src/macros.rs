@@ -33,10 +33,6 @@ macro_rules! create_named_track {
     };
 }
 
-create_named_track!(TranslationTrack, f32, 3);
-create_named_track!(RotationTrack, f32, 4);
-create_named_track!(ScalingTrack, f32, 3);
-
 macro_rules! create_named_translation {
    ($name:ident, $track:ty, $typ:ty, $size:expr) => {
         #[derive(PartialEq, Debug)]
@@ -88,6 +84,26 @@ macro_rules! create_named_translation {
     };
 }
 
-create_named_translation!(TextureTranslation, TranslationTrack, f32, 3);
-create_named_translation!(TextureRotation, RotationTrack, f32, 4);
-create_named_translation!(TextureScaling, ScalingTrack, f32, 3);
+// KTAT - KTAR - KTAS
+create_named_track!(TextureTranslationTrack, f32, 3);
+create_named_track!(TextureRotationTrack, f32, 4);
+create_named_track!(TextureScalingTrack, f32, 3);
+
+create_named_translation!(TextureTranslation, TextureTranslationTrack, f32, 3);
+create_named_translation!(TextureRotation, TextureRotationTrack, f32, 4);
+create_named_translation!(TextureScaling, TextureScalingTrack, f32, 3);
+
+// KGTR - KGRT - KGSC
+create_named_track!(GeosetTranslationTrack, f32, 3);
+create_named_track!(GeosetRotationTrack, f32, 4);
+create_named_track!(GeosetScalingTrack, f32, 3);
+
+create_named_translation!(GeosetTranslation, GeosetTranslationTrack, f32, 3);
+create_named_translation!(GeosetRotation, GeosetRotationTrack, f32, 4);
+create_named_translation!(GeosetScaling, GeosetScalingTrack, f32, 3);
+
+// KGAO - KGAC
+create_named_track!(GeosetAlphaTrack, f32, 1);
+create_named_track!(GeosetColorTrack, f32, 3);
+create_named_translation!(GeosetAlpha, GeosetAlphaTrack, f32, 1);
+create_named_translation!(GeosetColor, GeosetColorTrack, f32, 3);

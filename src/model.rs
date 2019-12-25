@@ -1,5 +1,5 @@
 use scroll::{ctx, Pread, Pwrite, LE, Endian};
-use crate::macros::{TextureTranslation, TextureRotation, TextureScaling};
+use crate::macros::{TextureTranslation, TextureRotation, TextureScaling, GeosetColor, GeosetAlpha};
 
 const MDLX_TAG: u32 = 1481393229;
 
@@ -10,11 +10,18 @@ const GLBS_TAG: u32 = 1396853831;
 const TEXS_TAG: u32 = 1398293844;
 const TXAN_TAG: u32 = 1312905300;
 const GEOS_TAG: u32 = 1397704007;
+const GEOA_TAG: u32 = 1095714119;
+const BONE_TAG: u32 = 1162760002;
 const PIVT_TAG: u32 = 1414941008;
 
 const KTAT_TAG: u32 = 1413567563;
 const KTAR_TAG: u32 = 1380013131;
 const KTAS_TAG: u32 = 1396790347;
+
+const KGTR_TAG: u32 = 1381254987;
+
+const KGAO_TAG: u32 = 1329678155;
+const KGAC_TAG: u32 = 1128351563;
 
 pub fn read_mdx_file(data: Vec<u8>) {
     let offset = &mut 0usize;
@@ -45,35 +52,42 @@ fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::E
     match tag {
         VERS_TAG => {
             let version_chunk = data.gread_with::<VersionChunk>(offset, LE)?;
-            dbg!(version_chunk);
+            //dbg!(version_chunk);
         },
         MODL_TAG => {
             let model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
-            dbg!(model_chunk);
+            //dbg!(model_chunk);
         },
         SEQS_TAG => {
             let sequence_chunk = data.gread_with::<SequenceChunk>(offset, LE)?;
-            dbg!(sequence_chunk);
+            //dbg!(sequence_chunk);
         },
         GLBS_TAG => {
             let global_sequence_chunk = data.gread_with::<GlobalSequenceChunk>(offset, LE)?;
-            dbg!(global_sequence_chunk);
+            //dbg!(global_sequence_chunk);
         }
         TEXS_TAG => {
             let texture_chunk = data.gread_with::<TextureChunk>(offset, LE)?;
-            dbg!(texture_chunk);
+            //dbg!(texture_chunk);
         },
         TXAN_TAG => {
             let texture_animation_chunk = data.gread_with::<TextureAnimationChunk>(offset, LE)?;
-            dbg!(texture_animation_chunk);
+            //dbg!(texture_animation_chunk);
         },
         GEOS_TAG => {
             let geoset_chunk = data.gread_with::<GeosetChunk>(offset, LE)?;
             //dbg!(geoset_chunk);
-        }
+        },
+        GEOA_TAG => {
+            let geoset_animation_chunk = data.gread_with::<GeosetAnimationChunk>(offset, LE)?;
+            //dbg!(geoset_animation_chunk);
+        },
+        BONE_TAG => {
+
+        },
         PIVT_TAG => {
             let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
-            dbg!(pivot_chunk);
+            //dbg!(pivot_chunk);
         },
         _ => {
             //let chunk_size = data.gread_with::<u32>(offset, LE)?;
@@ -457,6 +471,112 @@ impl ctx::TryFromCtx<'_, Endian> for GeosetChunk {
             bytes,
         }, *offset))
     }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct GeosetAnimationChunk {
+    pub chunk_size: u32,
+
+    pub data: Vec<GeosetAnimation>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for GeosetAnimationChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut data = Vec::new();
+        let mut total_size = 0u32;
+        while total_size < chunk_size {
+            let geoset_animation = src.gread_with::<GeosetAnimation>(offset, ctx)?;
+            total_size += geoset_animation.inclusive_size;
+            data.push(geoset_animation);
+        }
+
+        Ok((GeosetAnimationChunk {
+            chunk_size,
+            data,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct GeosetAnimation {
+    pub inclusive_size: u32,
+
+    pub alpha: f32,
+    pub flags: u32,
+    pub color: [f32; 3], // bgr
+    pub geoset_id: u32,
+
+    pub geoset_alpha: Option<GeosetAlpha>,
+    pub geoset_color: Option<GeosetColor>,
+}
+
+
+impl ctx::TryFromCtx<'_, Endian> for GeosetAnimation {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let inclusive_size = src.gread_with::<u32>(offset, ctx)?;
+        let alpha = src.gread_with::<f32>(offset, ctx)?;
+        let flags = src.gread_with::<u32>(offset, ctx)?;
+        let color = [
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+            src.gread_with::<f32>(offset, ctx)?,
+        ];
+        let geoset_id = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut geoset_animation = GeosetAnimation {
+            inclusive_size,
+            alpha,
+            flags,
+            color,
+            geoset_id,
+            geoset_alpha: None,
+            geoset_color: None
+        };
+
+        while (*offset as u32) < inclusive_size {
+            let tag = src.gread_with::<u32>(offset, ctx).unwrap();
+            dbg!(format!("{:X}", &tag));
+            dbg!(&tag);
+
+            match tag {
+                KGAO_TAG => {
+                    let geoset_alpha = src.gread_with::<GeosetAlpha>(offset, ctx)?;
+                    geoset_animation.geoset_alpha = Some(geoset_alpha);
+                },
+                KGAC_TAG => {
+                    let geoset_color = src.gread_with::<GeosetColor>(offset, ctx)?;
+                    geoset_animation.geoset_color = Some(geoset_color);
+                },
+                _ => unreachable!(),
+            }
+       }
+
+        Ok((geoset_animation, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct BoneChunk {
+    pub chunk_size: u32,
+
+    pub data: Vec<Bone>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Bone {
+    // Node
+
+    pub geoset_id: u32,
+    pub geoset_animation_id: u32,
 }
 
 #[derive(PartialEq, Debug)]
