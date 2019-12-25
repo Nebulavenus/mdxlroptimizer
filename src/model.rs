@@ -1,5 +1,9 @@
 use scroll::{ctx, Pread, Pwrite, LE, Endian};
-use crate::macros::{TextureTranslation, TextureRotation, TextureScaling, GeosetColor, GeosetAlpha};
+use crate::macros::{
+    TextureTranslation, TextureRotation, TextureScaling,
+    GeosetColor, GeosetAlpha,
+    GeosetTranslation, GeosetScaling, GeosetRotation,
+};
 
 const MDLX_TAG: u32 = 1481393229;
 
@@ -19,6 +23,8 @@ const KTAR_TAG: u32 = 1380013131;
 const KTAS_TAG: u32 = 1396790347;
 
 const KGTR_TAG: u32 = 1381254987;
+const KGRT_TAG: u32 = 1414678347;
+const KGSC_TAG: u32 = 1129531211;
 
 const KGAO_TAG: u32 = 1329678155;
 const KGAC_TAG: u32 = 1128351563;
@@ -83,7 +89,8 @@ fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::E
             //dbg!(geoset_animation_chunk);
         },
         BONE_TAG => {
-
+            let bone_chunk = data.gread_with::<BoneChunk>(offset, LE)?;
+            //dbg!(bone_chunk);
         },
         PIVT_TAG => {
             let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
@@ -571,12 +578,121 @@ pub struct BoneChunk {
     pub data: Vec<Bone>,
 }
 
+impl ctx::TryFromCtx<'_, Endian> for BoneChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut data = Vec::new();
+        let mut total_size = 0u32;
+        while total_size < chunk_size {
+            let bone = src.gread_with::<Bone>(offset, ctx)?;
+            // Node inclusive_size + two u32 inside bone struct
+            total_size += bone.node.inclusive_size + 4 + 4;
+            data.push(bone);
+        }
+
+        Ok((BoneChunk {
+            chunk_size,
+            data,
+        }, *offset))
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct Bone {
-    // Node
-
+    pub node: Node,
     pub geoset_id: u32,
     pub geoset_animation_id: u32,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for Bone {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let node = src.gread_with::<Node>(offset, ctx)?;
+        let geoset_id = src.gread_with::<u32>(offset, ctx)?;
+        let geoset_animation_id = src.gread_with::<u32>(offset, ctx)?;
+
+        Ok((Bone {
+            node,
+            geoset_id,
+            geoset_animation_id,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Node {
+    pub inclusive_size: u32,
+
+    // max length 80
+    pub name: String,
+    pub object_id: u32,
+    pub parent_id: u32,
+    pub flags: u32,
+
+    pub geoset_translation: Option<GeosetTranslation>,
+    pub geoset_rotation: Option<GeosetRotation>,
+    pub geoset_scaling: Option<GeosetScaling>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for Node {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let inclusive_size = src.gread_with::<u32>(offset, ctx)?;
+
+        // Name has fixed size
+        let max_name_len = 80usize;
+        let name = src.gread::<&str>(&mut offset.clone())?.to_string();
+        *offset += max_name_len;
+
+        let object_id = src.gread_with::<u32>(offset, ctx)?;
+        let parent_id = src.gread_with::<u32>(offset, ctx)?;
+        let flags = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut node = Node {
+            inclusive_size,
+            name,
+            object_id,
+            parent_id,
+            flags,
+            geoset_translation: None,
+            geoset_rotation: None,
+            geoset_scaling: None,
+        };
+
+        while (*offset as u32) < inclusive_size {
+
+            let tag = src.gread_with::<u32>(offset, LE).unwrap();
+            dbg!(format!("{:X}", &tag));
+            dbg!(&tag);
+
+            match tag {
+                KGTR_TAG => {
+                    let geoset_translation = src.gread_with::<GeosetTranslation>(offset, ctx)?;
+                    node.geoset_translation = Some(geoset_translation);
+                },
+                KGRT_TAG => {
+                    let geoset_rotation = src.gread_with::<GeosetRotation>(offset, ctx)?;
+                    node.geoset_rotation = Some(geoset_rotation);
+                },
+                KGSC_TAG => {
+                    let geoset_scaling = src.gread_with::<GeosetScaling>(offset, ctx)?;
+                    node.geoset_scaling = Some(geoset_scaling);
+                },
+                _ => unreachable!(),
+            }
+        }
+
+        Ok((node, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
