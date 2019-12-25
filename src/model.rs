@@ -16,7 +16,17 @@ const TXAN_TAG: u32 = 1312905300;
 const GEOS_TAG: u32 = 1397704007;
 const GEOA_TAG: u32 = 1095714119;
 const BONE_TAG: u32 = 1162760002;
+const MTLS_TAG: u32 = 1397511245;
+const LITE_TAG: u32 = 1231233123;
+const HELP_TAG: u32 = 1347175752;
+const ATCH_TAG: u32 = 1212372033;
 const PIVT_TAG: u32 = 1414941008;
+const PREM_TAG: u32 = 1296388688;
+const PRE2_TAG: u32 = 843403856;
+const RIBB_TAG: u32 = 1111640402;
+const EVTS_TAG: u32 = 1398036037;
+const CAMS_TAG: u32 = 1397571907;
+const CLID_TAG: u32 = 1145654339;
 
 const KTAT_TAG: u32 = 1413567563;
 const KTAR_TAG: u32 = 1380013131;
@@ -92,15 +102,51 @@ fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::E
             let bone_chunk = data.gread_with::<BoneChunk>(offset, LE)?;
             //dbg!(bone_chunk);
         },
+        LITE_TAG => {
+            let light_chunk = data.gread_with::<LightChunk>(offset, LE)?;
+            //dbg!(light_chunk);
+        },
+        HELP_TAG => {
+            let helper_chunk = data.gread_with::<HelperChunk>(offset, LE)?;
+            //dbg!(helper_chunk);
+        },
+        ATCH_TAG => {
+            let attachment_chunk = data.gread_with::<AttachmentChunk>(offset, LE)?;
+            //dbg!(attachment_chunk);
+        },
         PIVT_TAG => {
             let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
             //dbg!(pivot_chunk);
         },
-        _ => {
-            //let chunk_size = data.gread_with::<u32>(offset, LE)?;
-            //*offset += chunk_size as usize;
-            //*offset += 4;
+        PREM_TAG => {
+            let particle_emitter_chunk = data.gread_with::<ParticleEmitterChunk>(offset, LE)?;
+            //dbg!(particle_emitter_chunk);
         },
+        PRE2_TAG => {
+            let particle_emitter2_chunk = data.gread_with::<ParticleEmitter2Chunk>(offset, LE)?;
+            //dbg!(particle_emitter2_chunk);
+        },
+        RIBB_TAG => {
+            let ribbon_emitter_chunk = data.gread_with::<RibbonEmitterChunk>(offset, LE)?;
+            //dbg!(ribbon_emitter_chunk);
+        },
+        EVTS_TAG => {
+            let event_object_chunk = data.gread_with::<EventObjectChunk>(offset, LE)?;
+            //dbg!(event_object_chunk);
+        },
+        CAMS_TAG => {
+            let camera_chunk = data.gread_with::<CameraChunk>(offset, LE)?;
+            //dbg!(camera_chunk);
+        },
+        CLID_TAG => {
+            let collision_shape_chunk = data.gread_with::<CollisionShapeChunk>(offset, LE)?;
+            //dbg!(collision_shape_chunk);
+        },
+        MTLS_TAG => {
+            let material_chunk = data.gread_with::<MaterialChunk>(offset, LE)?;
+            //dbg!(material_chunk);
+        },
+        _ => unreachable!(),
     }
     Ok(())
 }
@@ -696,6 +742,109 @@ impl ctx::TryFromCtx<'_, Endian> for Node {
 }
 
 #[derive(PartialEq, Debug)]
+pub struct LightChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for LightChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((LightChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct HelperChunk {
+    pub chunk_size: u32,
+
+    pub data: Vec<Helper>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for HelperChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut data = Vec::new();
+        let mut total_size = 0u32;
+        while total_size < chunk_size {
+            let helper = src.gread_with::<Helper>(offset, ctx)?;
+            total_size += helper.node.inclusive_size;
+            data.push(helper);
+        }
+
+        Ok((HelperChunk {
+            chunk_size,
+            data,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Helper {
+    pub node: Node,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for Helper {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+        let node = src.gread_with::<Node>(offset, ctx)?;
+
+        Ok((Helper {
+            node,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct AttachmentChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for AttachmentChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((AttachmentChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
 pub struct PivotPointChunk {
     pub chunk_size: u32,
 
@@ -748,6 +897,202 @@ impl ctx::TryFromCtx<'_, Endian> for PivotPoint {
     }
 }
 
+#[derive(PartialEq, Debug)]
+pub struct ParticleEmitterChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for ParticleEmitterChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((ParticleEmitterChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct ParticleEmitter2Chunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for ParticleEmitter2Chunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((ParticleEmitter2Chunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct RibbonEmitterChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for RibbonEmitterChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((RibbonEmitterChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct EventObjectChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for EventObjectChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((EventObjectChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct CameraChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for CameraChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((CameraChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct CollisionShapeChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for CollisionShapeChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((CollisionShapeChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct MaterialChunk {
+    pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for MaterialChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((MaterialChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -755,7 +1100,10 @@ mod tests {
 
     #[test]
     fn read_mdx_file_api() {
-        let raw_data = fs::read("testfiles/base_model.mdx").unwrap();
+        //let raw_data = fs::read("testfiles/base_model.mdx").unwrap();
+        //let raw_data = fs::read("testfiles/druidcat.mdx").unwrap();
+        //let raw_data = fs::read("testfiles/herochaos.mdx").unwrap();
+        let raw_data = fs::read("testfiles/chaoswarrior.mdx").unwrap();
         dbg!(&raw_data.len());
         read_mdx_file(raw_data);
     }
