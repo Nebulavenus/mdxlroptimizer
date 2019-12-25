@@ -1,4 +1,5 @@
 use scroll::{ctx, Pread, Pwrite, LE, Endian};
+use crate::macros::{TextureTranslation, TextureRotation, TextureScaling};
 
 const MDLX_TAG: u32 = 1481393229;
 
@@ -8,6 +9,7 @@ const SEQS_TAG: u32 = 1397835091;
 const GLBS_TAG: u32 = 1396853831;
 const TEXS_TAG: u32 = 1398293844;
 const TXAN_TAG: u32 = 1312905300;
+const GEOS_TAG: u32 = 1397704007;
 const PIVT_TAG: u32 = 1414941008;
 
 const KTAT_TAG: u32 = 1413567563;
@@ -64,6 +66,10 @@ fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::E
         TXAN_TAG => {
             let texture_animation_chunk = data.gread_with::<TextureAnimationChunk>(offset, LE)?;
             dbg!(texture_animation_chunk);
+        },
+        GEOS_TAG => {
+            let geoset_chunk = data.gread_with::<GeosetChunk>(offset, LE)?;
+            //dbg!(geoset_chunk);
         }
         PIVT_TAG => {
             let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
@@ -426,252 +432,31 @@ impl ctx::TryFromCtx<'_, Endian> for TextureAnimation {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct TextureTranslation {
-    pub number_of_tracks: u32,
-    pub interpolation_type: u32,
-    pub global_sequence_id: u32,
-
-    // number_of_tracks
-    pub data: Vec<TranslationTrack>,
-}
-
-impl ctx::TryFromCtx<'_, Endian> for TextureTranslation {
-    type Error = scroll::Error;
-
-    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-
-        let number_of_tracks = src.gread_with::<u32>(offset, ctx)?;
-        let interpolation_type = src.gread_with::<u32>(offset, ctx)?;
-        let global_sequence_id = src.gread_with::<u32>(offset, ctx)?;
-
-        let mut data = Vec::new();
-        for _ in 0..number_of_tracks {
-            let mut translation_track = src.gread_with::<TranslationTrack>(offset, ctx)?;
-            if interpolation_type > 1 {
-                let in_tan = [
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                ];
-                let out_tan = [
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                ];
-
-                translation_track.in_tan = Some(in_tan);
-                translation_track.out_tan = Some(out_tan);
-            }
-            data.push(translation_track);
-        }
-
-        Ok((TextureTranslation {
-            number_of_tracks,
-            interpolation_type,
-            global_sequence_id,
-            data,
-        }, *offset))
-    }
-}
-
-#[derive(PartialEq, Debug)]
-pub struct TranslationTrack {
-    pub time: u32,
-    pub translation: [f32; 3],
-    pub in_tan: Option<[f32; 3]>,
-    pub out_tan: Option<[f32; 3]>,
-}
-
-impl ctx::TryFromCtx<'_, Endian> for TranslationTrack {
-    type Error = scroll::Error;
-
-    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-
-        let time = src.gread_with::<u32>(offset, ctx)?;
-        let translation = [
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-        ];
-
-        Ok((TranslationTrack {
-            time,
-            translation,
-            in_tan: None,
-            out_tan: None
-        }, *offset))
-    }
-}
-
-#[derive(PartialEq, Debug)]
-pub struct TextureRotation {
-    pub number_of_tracks: u32,
-    pub interpolation_type: u32,
-    pub global_sequence_id: u32,
-
-    // number_of_tracks
-    pub data: Vec<RotationTrack>,
-}
-
-impl ctx::TryFromCtx<'_, Endian> for TextureRotation {
-    type Error = scroll::Error;
-
-    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-
-        let number_of_tracks = src.gread_with::<u32>(offset, ctx)?;
-        let interpolation_type = src.gread_with::<u32>(offset, ctx)?;
-        let global_sequence_id = src.gread_with::<u32>(offset, ctx)?;
-
-        let mut data = Vec::new();
-        for _ in 0..number_of_tracks {
-            let mut rotation_track = src.gread_with::<RotationTrack>(offset, ctx)?;
-            if interpolation_type > 1 {
-                let in_tan = [
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                ];
-                let out_tan = [
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                ];
-
-                rotation_track.in_tan = Some(in_tan);
-                rotation_track.out_tan = Some(out_tan);
-            }
-            data.push(rotation_track);
-        }
-
-        Ok((TextureRotation {
-            number_of_tracks,
-            interpolation_type,
-            global_sequence_id,
-            data,
-        }, *offset))
-    }
-}
-
-#[derive(PartialEq, Debug)]
-pub struct RotationTrack {
-    pub time: u32,
-    pub rotation: [f32; 4],
-    pub in_tan: Option<[f32; 4]>,
-    pub out_tan: Option<[f32; 4]>,
-}
-
-impl ctx::TryFromCtx<'_, Endian> for RotationTrack {
-    type Error = scroll::Error;
-
-    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-
-        let time = src.gread_with::<u32>(offset, ctx)?;
-        let rotation = [
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-        ];
-
-        Ok((RotationTrack {
-            time,
-            rotation,
-            in_tan: None,
-            out_tan: None
-        }, *offset))
-    }
-}
-
-#[derive(PartialEq, Debug)]
-pub struct TextureScaling {
-    pub number_of_tracks: u32,
-    pub interpolation_type: u32,
-    pub global_sequence_id: u32,
-
-    // number_of_tracks
-    pub data: Vec<ScalingTrack>,
-}
-
-impl ctx::TryFromCtx<'_, Endian> for TextureScaling {
-    type Error = scroll::Error;
-
-    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-
-        let number_of_tracks = src.gread_with::<u32>(offset, ctx)?;
-        let interpolation_type = src.gread_with::<u32>(offset, ctx)?;
-        let global_sequence_id = src.gread_with::<u32>(offset, ctx)?;
-
-        let mut data = Vec::new();
-        for _ in 0..number_of_tracks {
-            let mut scaling_track = src.gread_with::<ScalingTrack>(offset, ctx)?;
-            if interpolation_type > 1 {
-                let in_tan = [
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                ];
-                let out_tan = [
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                    src.gread_with::<f32>(offset, ctx)?,
-                ];
-
-                scaling_track.in_tan = Some(in_tan);
-                scaling_track.out_tan = Some(out_tan);
-            }
-            data.push(scaling_track);
-        }
-
-        Ok((TextureScaling {
-            number_of_tracks,
-            interpolation_type,
-            global_sequence_id,
-            data,
-        }, *offset))
-    }
-}
-
-#[derive(PartialEq, Debug)]
-pub struct ScalingTrack {
-    pub time: u32,
-    pub scaling: [f32; 3],
-    pub in_tan: Option<[f32; 3]>,
-    pub out_tan: Option<[f32; 3]>,
-}
-
-impl ctx::TryFromCtx<'_, Endian> for ScalingTrack {
-    type Error = scroll::Error;
-
-    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
-        let offset = &mut 0;
-
-        let time = src.gread_with::<u32>(offset, ctx)?;
-        let scaling = [
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-            src.gread_with::<f32>(offset, ctx)?,
-        ];
-
-        Ok((ScalingTrack {
-            time,
-            scaling,
-            in_tan: None,
-            out_tan: None
-        }, *offset))
-    }
-}
-
-#[derive(PartialEq, Debug)]
 pub struct GeosetChunk {
-    pub geos: u32,
     pub chunk_size: u32,
+
+    pub bytes: Vec<u8>,
+}
+
+impl ctx::TryFromCtx<'_, Endian> for GeosetChunk {
+    type Error = scroll::Error;
+
+    fn try_from_ctx(src: &[u8], ctx: Endian) -> Result<(Self, usize), Self::Error> {
+        let offset = &mut 0;
+
+        let chunk_size = src.gread_with::<u32>(offset, ctx)?;
+
+        let mut bytes = Vec::with_capacity(chunk_size as usize);
+        unsafe {
+            bytes.set_len(chunk_size as usize);
+        }
+        src.gread_inout_with(offset, &mut bytes, ctx)?;
+
+        Ok((GeosetChunk {
+            chunk_size,
+            bytes,
+        }, *offset))
+    }
 }
 
 #[derive(PartialEq, Debug)]
