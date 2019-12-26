@@ -71,7 +71,20 @@ fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::E
             //dbg!(version_chunk);
         },
         MODL_TAG => {
-            let model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
+            let mut model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
+            dbg!(&model_chunk);
+            let offset1 = &mut 0usize;
+            let mut bytes = Vec::<u8>::with_capacity(376);
+            unsafe {
+                bytes.set_len(376); // +4 for MODL_TAG
+            }
+            bytes.gwrite_with::<ModelChunk>(model_chunk, offset1, LE)?;
+            //dbg!(bytes);
+            //dbg!(offset1);
+            let offset2 = &mut 0usize;
+
+            let mut model_chunk1 = bytes.gread_with::<ModelChunk>(offset2, LE)?;
+            dbg!(&model_chunk1);
             //dbg!(model_chunk);
         },
         SEQS_TAG => {
@@ -169,6 +182,19 @@ impl ctx::TryFromCtx<'_, Endian> for VersionChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for VersionChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+        src.gwrite_with::<u32>(self.version, offset, ctx)?;
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct ModelChunk {
     pub chunk_size: u32,
@@ -215,6 +241,38 @@ impl ctx::TryFromCtx<'_, Endian> for ModelChunk {
             maximum_extent,
             blend_time,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for ModelChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // Name has fixed size
+        let max_name_len = 336usize;
+        let null_offset = &mut 0usize;
+        for _ in 0..max_name_len {
+            src.gwrite_with::<u8>(0x0, null_offset, LE)?;
+        }
+        // FIX THIS IN SCROLL LIB
+        src.gwrite_with::<&str>(self.name.as_ref(), &mut offset.clone(), ())?.to_string();
+        *offset += max_name_len;
+
+        src.gwrite_with::<u32>(self.unknown, offset, ctx)?;
+        src.gwrite_with::<f32>(self.bounds_radius, offset, ctx)?;
+        for id in 0..3 {
+            src.gwrite_with::<f32>(self.minimum_extent[id], offset, ctx)?;
+        }
+        for id in 0..3 {
+            src.gwrite_with::<f32>(self.maximum_extent[id], offset, ctx)?;
+        }
+        src.gwrite_with::<u32>(self.blend_time, offset, ctx)?;
+
+        Ok(*offset)
     }
 }
 

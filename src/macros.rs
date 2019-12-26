@@ -30,6 +30,33 @@ macro_rules! create_named_track {
                 }, *offset))
             }
         }
+
+        impl ctx::TryIntoCtx<Endian> for $name {
+            type Error = scroll::Error;
+
+            fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+                let offset = &mut 0;
+
+                src.gwrite_with::<u32>(self.time, offset, ctx)?;
+                for id in 0..$size {
+                    src.gwrite_with::<$typ>(self.value[id], offset, ctx)?;
+                }
+
+                if self.in_tan.is_some() {
+                    for id in 0..$size {
+                        src.gwrite_with::<$typ>(self.in_tan.unwrap()[id], offset, ctx)?;
+                    }
+                }
+
+                if self.out_tan.is_some() {
+                    for id in 0..$size {
+                        src.gwrite_with::<$typ>(self.out_tan.unwrap()[id], offset, ctx)?;
+                    }
+                }
+
+                Ok(*offset)
+            }
+        }
     };
 }
 
@@ -79,6 +106,24 @@ macro_rules! create_named_translation {
                     global_sequence_id,
                     data,
                 }, *offset))
+            }
+        }
+
+        impl ctx::TryIntoCtx<Endian> for $name {
+            type Error = scroll::Error;
+
+            fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+                let offset = &mut 0;
+
+                src.gwrite_with::<u32>(self.number_of_tracks, offset, ctx)?;
+                src.gwrite_with::<u32>(self.interpolation_type, offset, ctx)?;
+                src.gwrite_with::<u32>(self.global_sequence_id, offset, ctx)?;
+
+                for track in self.data {
+                    src.gwrite_with::<$track>(track, offset, ctx)?;
+                }
+
+                Ok(*offset)
             }
         }
     };
