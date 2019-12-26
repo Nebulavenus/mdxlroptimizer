@@ -17,7 +17,7 @@ const GEOS_TAG: u32 = 1397704007;
 const GEOA_TAG: u32 = 1095714119;
 const BONE_TAG: u32 = 1162760002;
 const MTLS_TAG: u32 = 1397511245;
-const LITE_TAG: u32 = 1231233123;
+const LITE_TAG: u32 = 1163151692;
 const HELP_TAG: u32 = 1347175752;
 const ATCH_TAG: u32 = 1212372033;
 const PIVT_TAG: u32 = 1414941008;
@@ -39,129 +39,335 @@ const KGSC_TAG: u32 = 1129531211;
 const KGAO_TAG: u32 = 1329678155;
 const KGAC_TAG: u32 = 1128351563;
 
-pub fn read_mdx_file(data: Vec<u8>) {
-    let offset = &mut 0usize;
-    let mdlx_tag = data.gread_with::<u32>(offset, LE).unwrap();
-    if mdlx_tag == MDLX_TAG {
-        // Iterate over chunks
-        while *offset < data.len() {
-            dbg!(&offset);
-
-            // For debug
-            let mut tag_offset = offset.clone();
-            let tag_buffer
-                = (0..4).map(|_| data.gread::<u8>(&mut tag_offset).unwrap()).collect::<Vec<u8>>();
-            let tag_name = String::from_utf8(tag_buffer).unwrap_or("NOTAG".to_string());
-
-            let tag = data.gread_with::<u32>(offset, LE).unwrap();
-            dbg!(format!("{:X}", &tag));
-            dbg!(&tag);
-            dbg!(&tag_name);
-            handle_tag(tag, &data, offset).unwrap();
-        }
-    } else {
-        // Error, not mdlx
-    }
+#[derive(PartialEq, Debug, Default)]
+pub struct MDLXModel {
+    pub version_chunk: Option<VersionChunk>,
+    pub model_chunk: Option<ModelChunk>,
+    pub sequence_chunk: Option<SequenceChunk>,
+    pub global_sequence_chunk: Option<GlobalSequenceChunk>,
+    pub texture_chunk: Option<TextureChunk>,
+    pub texture_animation_chunk: Option<TextureAnimationChunk>,
+    pub geoset_chunk: Option<GeosetChunk>,
+    pub geoset_animation_chunk: Option<GeosetAnimationChunk>,
+    pub bone_chunk: Option<BoneChunk>,
+    pub light_chunk: Option<LightChunk>,
+    pub helper_chunk: Option<HelperChunk>,
+    pub attachment_chunk: Option<AttachmentChunk>,
+    pub pivot_point_chunk: Option<PivotPointChunk>,
+    pub particle_emitter_chunk: Option<ParticleEmitterChunk>,
+    pub particle_emitter2_chunk: Option<ParticleEmitter2Chunk>,
+    pub ribbon_emitter_chunk: Option<RibbonEmitterChunk>,
+    pub event_object_chunk: Option<EventObjectChunk>,
+    pub camera_chunk: Option<CameraChunk>,
+    pub collision_shape_chunk: Option<CollisionShapeChunk>,
+    pub material_chunk: Option<MaterialChunk>,
 }
 
-fn handle_tag(tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::Error> {
-    match tag {
-        VERS_TAG => {
-            let version_chunk = data.gread_with::<VersionChunk>(offset, LE)?;
-            //dbg!(version_chunk);
-        },
-        MODL_TAG => {
-            let mut model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
-            dbg!(&model_chunk);
-            let offset1 = &mut 0usize;
-            let mut bytes = Vec::<u8>::with_capacity(376);
-            unsafe {
-                bytes.set_len(376); // +4 for MODL_TAG
-            }
-            bytes.gwrite_with::<ModelChunk>(model_chunk, offset1, LE)?;
-            //dbg!(bytes);
-            //dbg!(offset1);
-            let offset2 = &mut 0usize;
+impl MDLXModel {
+    pub fn read_mdx_file(data: Vec<u8>) -> Result<MDLXModel, scroll::Error> {
+        let offset = &mut 0usize;
+        let mdlx_tag = data.gread_with::<u32>(offset, LE)?;
+        if mdlx_tag == MDLX_TAG {
+            let mut result = MDLXModel::default();
 
-            let mut model_chunk1 = bytes.gread_with::<ModelChunk>(offset2, LE)?;
-            dbg!(&model_chunk1);
-            //dbg!(model_chunk);
-        },
-        SEQS_TAG => {
-            let sequence_chunk = data.gread_with::<SequenceChunk>(offset, LE)?;
-            //dbg!(sequence_chunk);
-        },
-        GLBS_TAG => {
-            let global_sequence_chunk = data.gread_with::<GlobalSequenceChunk>(offset, LE)?;
-            //dbg!(global_sequence_chunk);
+            // Iterate over chunks
+            while *offset < data.len() {
+                dbg!(&offset);
+
+                // For debug
+                let mut tag_offset = offset.clone();
+                let tag_buffer
+                    = (0..4).map(|_| data.gread::<u8>(&mut tag_offset).unwrap()).collect::<Vec<u8>>();
+                let tag_name = String::from_utf8(tag_buffer).unwrap_or("NOTAG".to_string());
+
+                let tag = data.gread_with::<u32>(offset, LE)?;
+                dbg!(format!("{:X}", &tag));
+                dbg!(&tag);
+                dbg!(&tag_name);
+
+                result.handle_tag(tag, &data, offset)?;
+            }
+
+            Ok(result)
+        } else {
+            Err(scroll::Error::Custom("Not correct MDLX file".to_string()))
         }
-        TEXS_TAG => {
-            let texture_chunk = data.gread_with::<TextureChunk>(offset, LE)?;
-            //dbg!(texture_chunk);
-        },
-        TXAN_TAG => {
-            let texture_animation_chunk = data.gread_with::<TextureAnimationChunk>(offset, LE)?;
-            //dbg!(texture_animation_chunk);
-        },
-        GEOS_TAG => {
-            let geoset_chunk = data.gread_with::<GeosetChunk>(offset, LE)?;
-            //dbg!(geoset_chunk);
-        },
-        GEOA_TAG => {
-            let geoset_animation_chunk = data.gread_with::<GeosetAnimationChunk>(offset, LE)?;
-            //dbg!(geoset_animation_chunk);
-        },
-        BONE_TAG => {
-            let bone_chunk = data.gread_with::<BoneChunk>(offset, LE)?;
-            //dbg!(bone_chunk);
-        },
-        LITE_TAG => {
-            let light_chunk = data.gread_with::<LightChunk>(offset, LE)?;
-            //dbg!(light_chunk);
-        },
-        HELP_TAG => {
-            let helper_chunk = data.gread_with::<HelperChunk>(offset, LE)?;
-            //dbg!(helper_chunk);
-        },
-        ATCH_TAG => {
-            let attachment_chunk = data.gread_with::<AttachmentChunk>(offset, LE)?;
-            //dbg!(attachment_chunk);
-        },
-        PIVT_TAG => {
-            let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
-            //dbg!(pivot_chunk);
-        },
-        PREM_TAG => {
-            let particle_emitter_chunk = data.gread_with::<ParticleEmitterChunk>(offset, LE)?;
-            //dbg!(particle_emitter_chunk);
-        },
-        PRE2_TAG => {
-            let particle_emitter2_chunk = data.gread_with::<ParticleEmitter2Chunk>(offset, LE)?;
-            //dbg!(particle_emitter2_chunk);
-        },
-        RIBB_TAG => {
-            let ribbon_emitter_chunk = data.gread_with::<RibbonEmitterChunk>(offset, LE)?;
-            //dbg!(ribbon_emitter_chunk);
-        },
-        EVTS_TAG => {
-            let event_object_chunk = data.gread_with::<EventObjectChunk>(offset, LE)?;
-            //dbg!(event_object_chunk);
-        },
-        CAMS_TAG => {
-            let camera_chunk = data.gread_with::<CameraChunk>(offset, LE)?;
-            //dbg!(camera_chunk);
-        },
-        CLID_TAG => {
-            let collision_shape_chunk = data.gread_with::<CollisionShapeChunk>(offset, LE)?;
-            //dbg!(collision_shape_chunk);
-        },
-        MTLS_TAG => {
-            let material_chunk = data.gread_with::<MaterialChunk>(offset, LE)?;
-            //dbg!(material_chunk);
-        },
-        _ => unreachable!(),
     }
-    Ok(())
+
+    pub fn write_mdx_file(model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
+        // Get total size of mdx file
+        // TODO(nv): fix calculation model's total size, probably lost tags bytes...
+        let mut total_size = model.model_total_size() + 4 + 64;
+
+        // Create vec with capacity and set it len to total size
+        let mut data = Vec::<u8>::with_capacity(total_size);
+        unsafe {
+            data.set_len(total_size);
+        }
+
+        // Begin to write fields
+        let offset = &mut 0usize;
+
+        data.gwrite_with::<u32>(MDLX_TAG, offset, LE)?;
+
+        if model.version_chunk.is_some() {
+            data.gwrite_with::<u32>(VERS_TAG, offset, LE)?;
+            data.gwrite_with::<VersionChunk>(model.version_chunk.unwrap(), offset, LE)?;
+        }
+        if model.model_chunk.is_some() {
+            data.gwrite_with::<u32>(MODL_TAG, offset, LE)?;
+            data.gwrite_with::<ModelChunk>(model.model_chunk.unwrap(), offset, LE)?;
+        }
+        if model.sequence_chunk.is_some() {
+            data.gwrite_with::<u32>(SEQS_TAG, offset, LE)?;
+            data.gwrite_with::<SequenceChunk>(model.sequence_chunk.unwrap(), offset, LE)?;
+        }
+        if model.global_sequence_chunk.is_some() {
+            data.gwrite_with::<u32>(GLBS_TAG, offset, LE)?;
+            data.gwrite_with::<GlobalSequenceChunk>(model.global_sequence_chunk.unwrap(), offset, LE)?;
+        }
+        if model.texture_chunk.is_some() {
+            data.gwrite_with::<u32>(TEXS_TAG, offset, LE)?;
+            data.gwrite_with::<TextureChunk>(model.texture_chunk.unwrap(), offset, LE)?;
+        }
+        if model.texture_animation_chunk.is_some() {
+            data.gwrite_with::<u32>(TXAN_TAG, offset, LE)?;
+            data.gwrite_with::<TextureAnimationChunk>(model.texture_animation_chunk.unwrap(), offset, LE)?;
+        }
+        if model.geoset_chunk.is_some() {
+            data.gwrite_with::<u32>(GEOS_TAG, offset, LE)?;
+            data.gwrite_with::<GeosetChunk>(model.geoset_chunk.unwrap(), offset, LE)?;
+        }
+        if model.geoset_animation_chunk.is_some() {
+            data.gwrite_with::<u32>(GEOA_TAG, offset, LE)?;
+            data.gwrite_with::<GeosetAnimationChunk>(model.geoset_animation_chunk.unwrap(), offset, LE)?;
+        }
+        if model.bone_chunk.is_some() {
+            data.gwrite_with::<u32>(BONE_TAG, offset, LE)?;
+            data.gwrite_with::<BoneChunk>(model.bone_chunk.unwrap(), offset, LE)?;
+        }
+        if model.light_chunk.is_some() {
+            data.gwrite_with::<u32>(LITE_TAG, offset, LE)?;
+            data.gwrite_with::<LightChunk>(model.light_chunk.unwrap(), offset, LE)?;
+        }
+        if model.helper_chunk.is_some() {
+            data.gwrite_with::<u32>(HELP_TAG, offset, LE)?;
+            data.gwrite_with::<HelperChunk>(model.helper_chunk.unwrap(), offset, LE)?;
+        }
+        if model.attachment_chunk.is_some() {
+            data.gwrite_with::<u32>(ATCH_TAG, offset, LE)?;
+            data.gwrite_with::<AttachmentChunk>(model.attachment_chunk.unwrap(), offset, LE)?;
+        }
+        if model.pivot_point_chunk.is_some() {
+            data.gwrite_with::<u32>(PIVT_TAG, offset, LE)?;
+            data.gwrite_with::<PivotPointChunk>(model.pivot_point_chunk.unwrap(), offset, LE)?;
+        }
+        if model.particle_emitter_chunk.is_some() {
+            data.gwrite_with::<u32>(PREM_TAG, offset, LE)?;
+            data.gwrite_with::<ParticleEmitterChunk>(model.particle_emitter_chunk.unwrap(), offset, LE)?;
+        }
+        if model.particle_emitter2_chunk.is_some() {
+            data.gwrite_with::<u32>(PRE2_TAG, offset, LE)?;
+            data.gwrite_with::<ParticleEmitter2Chunk>(model.particle_emitter2_chunk.unwrap(), offset, LE)?;
+        }
+        if model.ribbon_emitter_chunk.is_some() {
+            data.gwrite_with::<u32>(RIBB_TAG, offset, LE)?;
+            data.gwrite_with::<RibbonEmitterChunk>(model.ribbon_emitter_chunk.unwrap(), offset, LE)?;
+        }
+        if model.event_object_chunk.is_some() {
+            data.gwrite_with::<u32>(EVTS_TAG, offset, LE)?;
+            data.gwrite_with::<EventObjectChunk>(model.event_object_chunk.unwrap(), offset, LE)?;
+        }
+        if model.camera_chunk.is_some() {
+            data.gwrite_with::<u32>(CAMS_TAG, offset, LE)?;
+            data.gwrite_with::<CameraChunk>(model.camera_chunk.unwrap(), offset, LE)?;
+        }
+        if model.collision_shape_chunk.is_some() {
+            data.gwrite_with::<u32>(CLID_TAG, offset, LE)?;
+            data.gwrite_with::<CollisionShapeChunk>(model.collision_shape_chunk.unwrap(), offset, LE)?;
+        }
+        if model.material_chunk.is_some() {
+            data.gwrite_with::<u32>(MTLS_TAG, offset, LE)?;
+            data.gwrite_with::<MaterialChunk>(model.material_chunk.unwrap(), offset, LE)?;
+        }
+
+        // Return result
+        Ok(data)
+    }
+
+    fn model_total_size(&self) -> usize {
+        let mut result = 0usize;
+        // Tag size and chunk size
+        if self.version_chunk.is_some() {
+            result += 4;
+            result += self.version_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.model_chunk.is_some() {
+            result += 4;
+            result += self.model_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.sequence_chunk.is_some() {
+            result += 4;
+            result += self.sequence_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.global_sequence_chunk.is_some() {
+            result += 4;
+            result += self.global_sequence_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.texture_chunk.is_some() {
+            result += 4;
+            result += self.texture_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.texture_animation_chunk.is_some() {
+            result += 4;
+            result += self.texture_animation_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.geoset_chunk.is_some() {
+            result += 4;
+            result += self.geoset_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.geoset_animation_chunk.is_some() {
+            result += 4;
+            result += self.geoset_animation_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.bone_chunk.is_some() {
+            result += 4;
+            result += self.bone_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.light_chunk.is_some() {
+            result += 4;
+            result += self.light_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.helper_chunk.is_some() {
+            result += 4;
+            result += self.helper_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.attachment_chunk.is_some() {
+            result += 4;
+            result += self.attachment_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.pivot_point_chunk.is_some() {
+            result += 4;
+            result += self.pivot_point_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.particle_emitter_chunk.is_some() {
+            result += 4;
+            result += self.particle_emitter_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.particle_emitter2_chunk.is_some() {
+            result += 4;
+            result += self.particle_emitter2_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.ribbon_emitter_chunk.is_some() {
+            result += 4;
+            result += self.ribbon_emitter_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.event_object_chunk.is_some() {
+            result += 4;
+            result += self.event_object_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.camera_chunk.is_some() {
+            result += 4;
+            result += self.camera_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.collision_shape_chunk.is_some() {
+            result += 4;
+            result += self.collision_shape_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+        if self.material_chunk.is_some() {
+            result += 4;
+            result += self.material_chunk.as_ref().unwrap().chunk_size as usize;
+        }
+
+        result
+    }
+
+    fn handle_tag(&mut self, tag: u32, data: &[u8], offset: &mut usize) -> Result<(), scroll::Error> {
+        match tag {
+            VERS_TAG => {
+                let version_chunk = data.gread_with::<VersionChunk>(offset, LE)?;
+                self.version_chunk = Some(version_chunk);
+            },
+            MODL_TAG => {
+                let mut model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
+                self.model_chunk = Some(model_chunk);
+            },
+            SEQS_TAG => {
+                let sequence_chunk = data.gread_with::<SequenceChunk>(offset, LE)?;
+                self.sequence_chunk = Some(sequence_chunk);
+            },
+            GLBS_TAG => {
+                let global_sequence_chunk = data.gread_with::<GlobalSequenceChunk>(offset, LE)?;
+                self.global_sequence_chunk = Some(global_sequence_chunk);
+            }
+            TEXS_TAG => {
+                let texture_chunk = data.gread_with::<TextureChunk>(offset, LE)?;
+                self.texture_chunk = Some(texture_chunk);
+            },
+            TXAN_TAG => {
+                let texture_animation_chunk = data.gread_with::<TextureAnimationChunk>(offset, LE)?;
+                self.texture_animation_chunk = Some(texture_animation_chunk);
+            },
+            GEOS_TAG => {
+                let geoset_chunk = data.gread_with::<GeosetChunk>(offset, LE)?;
+                self.geoset_chunk = Some(geoset_chunk);
+            },
+            GEOA_TAG => {
+                let geoset_animation_chunk = data.gread_with::<GeosetAnimationChunk>(offset, LE)?;
+                self.geoset_animation_chunk = Some(geoset_animation_chunk);
+            },
+            BONE_TAG => {
+                let bone_chunk = data.gread_with::<BoneChunk>(offset, LE)?;
+                self.bone_chunk = Some(bone_chunk);
+            },
+            LITE_TAG => {
+                let light_chunk = data.gread_with::<LightChunk>(offset, LE)?;
+                self.light_chunk = Some(light_chunk);
+            },
+            HELP_TAG => {
+                let helper_chunk = data.gread_with::<HelperChunk>(offset, LE)?;
+                self.helper_chunk = Some(helper_chunk);
+            },
+            ATCH_TAG => {
+                let attachment_chunk = data.gread_with::<AttachmentChunk>(offset, LE)?;
+                self.attachment_chunk = Some(attachment_chunk);
+            },
+            PIVT_TAG => {
+                let pivot_chunk = data.gread_with::<PivotPointChunk>(offset, LE)?;
+                self.pivot_point_chunk = Some(pivot_chunk);
+            },
+            PREM_TAG => {
+                let particle_emitter_chunk = data.gread_with::<ParticleEmitterChunk>(offset, LE)?;
+                self.particle_emitter_chunk = Some(particle_emitter_chunk);
+            },
+            PRE2_TAG => {
+                let particle_emitter2_chunk = data.gread_with::<ParticleEmitter2Chunk>(offset, LE)?;
+                self.particle_emitter2_chunk = Some(particle_emitter2_chunk);
+            },
+            RIBB_TAG => {
+                let ribbon_emitter_chunk = data.gread_with::<RibbonEmitterChunk>(offset, LE)?;
+                self.ribbon_emitter_chunk = Some(ribbon_emitter_chunk);
+            },
+            EVTS_TAG => {
+                let event_object_chunk = data.gread_with::<EventObjectChunk>(offset, LE)?;
+                self.event_object_chunk = Some(event_object_chunk);
+            },
+            CAMS_TAG => {
+                let camera_chunk = data.gread_with::<CameraChunk>(offset, LE)?;
+                self.camera_chunk = Some(camera_chunk);
+            },
+            CLID_TAG => {
+                let collision_shape_chunk = data.gread_with::<CollisionShapeChunk>(offset, LE)?;
+                self.collision_shape_chunk = Some(collision_shape_chunk);
+            },
+            MTLS_TAG => {
+                let material_chunk = data.gread_with::<MaterialChunk>(offset, LE)?;
+                self.material_chunk = Some(material_chunk);
+            },
+            _ => unreachable!(),
+        }
+        Ok(())
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -698,12 +904,15 @@ impl ctx::TryIntoCtx<Endian> for TextureAnimation {
         src.gwrite_with::<u32>(self.inclusive_size, offset, ctx)?;
 
         if self.texture_translation.is_some() {
+            src.gwrite_with::<u32>(KTAT_TAG, offset, ctx)?;
             src.gwrite_with::<TextureTranslation>(self.texture_translation.unwrap(), offset, ctx)?;
         }
         if self.texture_rotation.is_some() {
+            src.gwrite_with::<u32>(KTAR_TAG, offset, ctx)?;
             src.gwrite_with::<TextureRotation>(self.texture_rotation.unwrap(), offset, ctx)?;
         }
         if self.texture_scaling.is_some() {
+            src.gwrite_with::<u32>(KTAS_TAG, offset, ctx)?;
             src.gwrite_with::<TextureScaling>(self.texture_scaling.unwrap(), offset, ctx)?;
         }
 
@@ -747,8 +956,7 @@ impl ctx::TryIntoCtx<Endian> for GeosetChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -875,9 +1083,11 @@ impl ctx::TryIntoCtx<Endian> for GeosetAnimation {
         src.gwrite_with::<u32>(self.geoset_id, offset, ctx)?;
 
         if self.geoset_alpha.is_some() {
+            src.gwrite_with::<u32>(KGAO_TAG, offset, ctx)?;
             src.gwrite_with::<GeosetAlpha>(self.geoset_alpha.unwrap(), offset, ctx)?;
         }
         if self.geoset_color.is_some() {
+            src.gwrite_with::<u32>(KGAC_TAG, offset, ctx)?;
             src.gwrite_with::<GeosetColor>(self.geoset_color.unwrap(), offset, ctx)?;
         }
 
@@ -903,8 +1113,7 @@ impl ctx::TryFromCtx<'_, Endian> for BoneChunk {
         let mut total_size = 0u32;
         while total_size < chunk_size {
             let bone = src.gread_with::<Bone>(offset, ctx)?;
-            // Node inclusive_size + two u32 inside bone struct
-            total_size += bone.node.inclusive_size + 4 + 4;
+            total_size += bone.inclusive_size;
             data.push(bone);
         }
 
@@ -933,6 +1142,8 @@ impl ctx::TryIntoCtx<Endian> for BoneChunk {
 
 #[derive(PartialEq, Debug)]
 pub struct Bone {
+    pub inclusive_size: u32,
+
     pub node: Node,
     pub geoset_id: u32,
     pub geoset_animation_id: u32,
@@ -946,8 +1157,11 @@ impl ctx::TryFromCtx<'_, Endian> for Bone {
         let node = src.gread_with::<Node>(offset, ctx)?;
         let geoset_id = src.gread_with::<u32>(offset, ctx)?;
         let geoset_animation_id = src.gread_with::<u32>(offset, ctx)?;
+        // Node inclusive_size + two u32 inside bone struct
+        let inclusive_size = node.inclusive_size + 4 + 4;
 
         Ok((Bone {
+            inclusive_size,
             node,
             geoset_id,
             geoset_animation_id,
@@ -1061,12 +1275,15 @@ impl ctx::TryIntoCtx<Endian> for Node {
         src.gwrite_with::<u32>(self.flags, offset, ctx)?;
 
         if self.geoset_translation.is_some() {
+            src.gwrite_with::<u32>(KGTR_TAG, offset, ctx)?;
             src.gwrite_with::<GeosetTranslation>(self.geoset_translation.unwrap(), offset, ctx)?;
         }
         if self.geoset_rotation.is_some() {
+            src.gwrite_with::<u32>(KGRT_TAG, offset, ctx)?;
             src.gwrite_with::<GeosetRotation>(self.geoset_rotation.unwrap(), offset, ctx)?;
         }
         if self.geoset_scaling.is_some() {
+            src.gwrite_with::<u32>(KGSC_TAG, offset, ctx)?;
             src.gwrite_with::<GeosetScaling>(self.geoset_scaling.unwrap(), offset, ctx)?;
         }
 
@@ -1110,8 +1327,7 @@ impl ctx::TryIntoCtx<Endian> for LightChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1228,8 +1444,7 @@ impl ctx::TryIntoCtx<Endian> for AttachmentChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1354,8 +1569,7 @@ impl ctx::TryIntoCtx<Endian> for ParticleEmitterChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1397,8 +1611,7 @@ impl ctx::TryIntoCtx<Endian> for ParticleEmitter2Chunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1440,8 +1653,7 @@ impl ctx::TryIntoCtx<Endian> for RibbonEmitterChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1483,8 +1695,7 @@ impl ctx::TryIntoCtx<Endian> for EventObjectChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1526,8 +1737,7 @@ impl ctx::TryIntoCtx<Endian> for CameraChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1569,8 +1779,7 @@ impl ctx::TryIntoCtx<Endian> for CollisionShapeChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1612,8 +1821,7 @@ impl ctx::TryIntoCtx<Endian> for MaterialChunk {
 
         src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
 
-        // TODO(nv): test this for correctness
-        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+        src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
     }
@@ -1628,10 +1836,15 @@ mod tests {
     fn read_mdx_file_api() {
         //let raw_data = fs::read("testfiles/base_model.mdx").unwrap();
         //let raw_data = fs::read("testfiles/druidcat.mdx").unwrap();
-        //let raw_data = fs::read("testfiles/herochaos.mdx").unwrap();
-        let raw_data = fs::read("testfiles/chaoswarrior.mdx").unwrap();
+        let raw_data = fs::read("testfiles/herochaos.mdx").unwrap();
+        //let raw_data = fs::read("testfiles/chaoswarrior.mdx").unwrap();
         dbg!(&raw_data.len());
-        read_mdx_file(raw_data);
+        let model = MDLXModel::read_mdx_file(raw_data.clone()).unwrap();
+        dbg!(&model.model_total_size());
+
+        let bytes = MDLXModel::write_mdx_file(model).unwrap();
+        dbg!(&bytes.len());
+        fs::write("testfiles/chaoswarrior_resave.mdx", bytes).unwrap();
     }
 
 }
