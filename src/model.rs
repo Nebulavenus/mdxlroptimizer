@@ -254,7 +254,7 @@ impl ctx::TryIntoCtx<Endian> for ModelChunk {
 
         // Name has fixed size
         let max_name_len = 336usize;
-        let null_offset = &mut 0usize;
+        let null_offset = &mut offset.clone();
         for _ in 0..max_name_len {
             src.gwrite_with::<u8>(0x0, null_offset, LE)?;
         }
@@ -303,6 +303,22 @@ impl ctx::TryFromCtx<'_, Endian> for SequenceChunk {
             chunk_size,
             data,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for SequenceChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for sequence in self.data {
+            src.gwrite_with::<Sequence>(sequence, offset, ctx)?;
+        }
+
+        Ok(*offset)
     }
 }
 
@@ -364,6 +380,39 @@ impl ctx::TryFromCtx<'_, Endian> for Sequence {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for Sequence {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        // Name has fixed size
+        let max_name_len = 80usize;
+        let null_offset = &mut 0usize;
+        for _ in 0..max_name_len {
+            src.gwrite_with::<u8>(0x0, null_offset, LE)?;
+        }
+        src.gwrite_with::<&str>(self.name.as_ref(), &mut offset.clone(), ())?.to_string();
+        *offset += max_name_len;
+
+        src.gwrite_with::<u32>(self.interval_start, offset, ctx)?;
+        src.gwrite_with::<u32>(self.interval_end, offset, ctx)?;
+        src.gwrite_with::<f32>(self.move_speed, offset, ctx)?;
+        src.gwrite_with::<u32>(self.non_looping, offset, ctx)?;
+        src.gwrite_with::<f32>(self.rarity, offset, ctx)?;
+        src.gwrite_with::<u32>(self.unknown, offset, ctx)?;
+        src.gwrite_with::<f32>(self.bounds_radius, offset, ctx)?;
+        for id in 0..3 {
+            src.gwrite_with::<f32>(self.minimum_extent[id], offset, ctx)?;
+        }
+        for id in 0..3 {
+            src.gwrite_with::<f32>(self.maximum_extent[id], offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GlobalSequenceChunk {
     pub chunk_size: u32,
@@ -394,6 +443,22 @@ impl ctx::TryFromCtx<'_, Endian> for GlobalSequenceChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for GlobalSequenceChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for global_sequence in self.data {
+            src.gwrite_with::<GlobalSequence>(global_sequence, offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GlobalSequence {
     pub duration: u32,
@@ -410,6 +475,18 @@ impl ctx::TryFromCtx<'_, Endian> for GlobalSequence {
         Ok((GlobalSequence {
             duration,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for GlobalSequence {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.duration, offset, ctx)?;
+
+        Ok(*offset)
     }
 }
 
@@ -440,6 +517,22 @@ impl ctx::TryFromCtx<'_, Endian> for TextureChunk {
             chunk_size,
             data,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for TextureChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for texture in self.data {
+            src.gwrite_with::<Texture>(texture, offset, ctx)?;
+        }
+
+        Ok(*offset)
     }
 }
 
@@ -475,6 +568,30 @@ impl ctx::TryFromCtx<'_, Endian> for Texture {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for Texture {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.replaceable_id, offset, ctx)?;
+
+        // Name has fixed size
+        let max_name_len = 256usize;
+        let null_offset = &mut offset.clone();
+        for _ in 0..max_name_len {
+            src.gwrite_with::<u8>(0x0, null_offset, LE)?;
+        }
+        src.gwrite_with::<&str>(self.file_name.as_ref(), &mut offset.clone(), ())?.to_string();
+        *offset += max_name_len;
+
+        src.gwrite_with::<u32>(self.unknown, offset, ctx)?;
+        src.gwrite_with::<u32>(self.flags, offset, ctx)?;
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct TextureAnimationChunk {
     pub chunk_size: u32,
@@ -501,6 +618,22 @@ impl ctx::TryFromCtx<'_, Endian> for TextureAnimationChunk {
             chunk_size,
             data,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for TextureAnimationChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for texture_animation in self.data {
+            src.gwrite_with::<TextureAnimation>(texture_animation, offset, ctx)?;
+        }
+
+        Ok(*offset)
     }
 }
 
@@ -556,6 +689,28 @@ impl ctx::TryFromCtx<'_, Endian> for TextureAnimation {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for TextureAnimation {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.inclusive_size, offset, ctx)?;
+
+        if self.texture_translation.is_some() {
+            src.gwrite_with::<TextureTranslation>(self.texture_translation.unwrap(), offset, ctx)?;
+        }
+        if self.texture_rotation.is_some() {
+            src.gwrite_with::<TextureRotation>(self.texture_rotation.unwrap(), offset, ctx)?;
+        }
+        if self.texture_scaling.is_some() {
+            src.gwrite_with::<TextureScaling>(self.texture_scaling.unwrap(), offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GeosetChunk {
     pub chunk_size: u32,
@@ -581,6 +736,21 @@ impl ctx::TryFromCtx<'_, Endian> for GeosetChunk {
             chunk_size,
             bytes,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for GeosetChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
     }
 }
 
@@ -613,6 +783,22 @@ impl ctx::TryFromCtx<'_, Endian> for GeosetAnimationChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for GeosetAnimationChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for geoset_animation in self.data {
+            src.gwrite_with::<GeosetAnimation>(geoset_animation, offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GeosetAnimation {
     pub inclusive_size: u32,
@@ -625,7 +811,6 @@ pub struct GeosetAnimation {
     pub geoset_alpha: Option<GeosetAlpha>,
     pub geoset_color: Option<GeosetColor>,
 }
-
 
 impl ctx::TryFromCtx<'_, Endian> for GeosetAnimation {
     type Error = scroll::Error;
@@ -675,6 +860,31 @@ impl ctx::TryFromCtx<'_, Endian> for GeosetAnimation {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for GeosetAnimation {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.inclusive_size, offset, ctx)?;
+        src.gwrite_with::<f32>(self.alpha, offset, ctx)?;
+        src.gwrite_with::<u32>(self.flags, offset, ctx)?;
+        for id in 0..3 {
+            src.gwrite_with::<f32>(self.color[id], offset, ctx)?;
+        }
+        src.gwrite_with::<u32>(self.geoset_id, offset, ctx)?;
+
+        if self.geoset_alpha.is_some() {
+            src.gwrite_with::<GeosetAlpha>(self.geoset_alpha.unwrap(), offset, ctx)?;
+        }
+        if self.geoset_color.is_some() {
+            src.gwrite_with::<GeosetColor>(self.geoset_color.unwrap(), offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct BoneChunk {
     pub chunk_size: u32,
@@ -705,6 +915,22 @@ impl ctx::TryFromCtx<'_, Endian> for BoneChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for BoneChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for bone in self.data {
+            src.gwrite_with::<Bone>(bone, offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct Bone {
     pub node: Node,
@@ -726,6 +952,20 @@ impl ctx::TryFromCtx<'_, Endian> for Bone {
             geoset_id,
             geoset_animation_id,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for Bone {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<Node>(self.node, offset, ctx)?;
+        src.gwrite_with::<u32>(self.geoset_id, offset, ctx)?;
+        src.gwrite_with::<u32>(self.geoset_animation_id, offset, ctx)?;
+
+        Ok(*offset)
     }
 }
 
@@ -799,6 +1039,41 @@ impl ctx::TryFromCtx<'_, Endian> for Node {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for Node {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.inclusive_size, offset, ctx)?;
+
+        // Name has fixed size
+        let max_name_len = 80usize;
+        let null_offset = &mut offset.clone();
+        for _ in 0..max_name_len {
+            src.gwrite_with::<u8>(0x0, null_offset, LE)?;
+        }
+        src.gwrite_with::<&str>(self.name.as_ref(), &mut offset.clone(), ())?.to_string();
+        *offset += max_name_len;
+
+        src.gwrite_with::<u32>(self.object_id, offset, ctx)?;
+        src.gwrite_with::<u32>(self.parent_id, offset, ctx)?;
+        src.gwrite_with::<u32>(self.flags, offset, ctx)?;
+
+        if self.geoset_translation.is_some() {
+            src.gwrite_with::<GeosetTranslation>(self.geoset_translation.unwrap(), offset, ctx)?;
+        }
+        if self.geoset_rotation.is_some() {
+            src.gwrite_with::<GeosetRotation>(self.geoset_rotation.unwrap(), offset, ctx)?;
+        }
+        if self.geoset_scaling.is_some() {
+            src.gwrite_with::<GeosetScaling>(self.geoset_scaling.unwrap(), offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct LightChunk {
     pub chunk_size: u32,
@@ -824,6 +1099,21 @@ impl ctx::TryFromCtx<'_, Endian> for LightChunk {
             chunk_size,
             bytes,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for LightChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
     }
 }
 
@@ -856,6 +1146,22 @@ impl ctx::TryFromCtx<'_, Endian> for HelperChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for HelperChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for helper in self.data {
+            src.gwrite_with::<Helper>(helper, offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct Helper {
     pub node: Node,
@@ -871,6 +1177,18 @@ impl ctx::TryFromCtx<'_, Endian> for Helper {
         Ok((Helper {
             node,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for Helper {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<Node>(self.node, offset, ctx)?;
+
+        Ok(*offset)
     }
 }
 
@@ -899,6 +1217,21 @@ impl ctx::TryFromCtx<'_, Endian> for AttachmentChunk {
             chunk_size,
             bytes,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for AttachmentChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
     }
 }
 
@@ -932,6 +1265,22 @@ impl ctx::TryFromCtx<'_, Endian> for PivotPointChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for PivotPointChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        for pivot_point in self.data {
+            src.gwrite_with::<PivotPoint>(pivot_point, offset, ctx)?;
+        }
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct PivotPoint {
     pub position: [f32; 3],
@@ -952,6 +1301,20 @@ impl ctx::TryFromCtx<'_, Endian> for PivotPoint {
         Ok((PivotPoint {
             position,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for PivotPoint {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        for id in 0..3 {
+            src.gwrite_with::<f32>(self.position[id], offset, ctx)?;
+        }
+
+        Ok(*offset)
     }
 }
 
@@ -983,6 +1346,21 @@ impl ctx::TryFromCtx<'_, Endian> for ParticleEmitterChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for ParticleEmitterChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct ParticleEmitter2Chunk {
     pub chunk_size: u32,
@@ -1008,6 +1386,21 @@ impl ctx::TryFromCtx<'_, Endian> for ParticleEmitter2Chunk {
             chunk_size,
             bytes,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for ParticleEmitter2Chunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
     }
 }
 
@@ -1039,6 +1432,21 @@ impl ctx::TryFromCtx<'_, Endian> for RibbonEmitterChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for RibbonEmitterChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct EventObjectChunk {
     pub chunk_size: u32,
@@ -1064,6 +1472,21 @@ impl ctx::TryFromCtx<'_, Endian> for EventObjectChunk {
             chunk_size,
             bytes,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for EventObjectChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
     }
 }
 
@@ -1095,6 +1518,21 @@ impl ctx::TryFromCtx<'_, Endian> for CameraChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for CameraChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct CollisionShapeChunk {
     pub chunk_size: u32,
@@ -1123,6 +1561,21 @@ impl ctx::TryFromCtx<'_, Endian> for CollisionShapeChunk {
     }
 }
 
+impl ctx::TryIntoCtx<Endian> for CollisionShapeChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct MaterialChunk {
     pub chunk_size: u32,
@@ -1148,6 +1601,21 @@ impl ctx::TryFromCtx<'_, Endian> for MaterialChunk {
             chunk_size,
             bytes,
         }, *offset))
+    }
+}
+
+impl ctx::TryIntoCtx<Endian> for MaterialChunk {
+    type Error = scroll::Error;
+
+    fn try_into_ctx(self, src: &mut [u8], ctx: Endian) -> Result<usize, Self::Error> {
+        let offset = &mut 0;
+
+        src.gwrite_with::<u32>(self.chunk_size, offset, ctx)?;
+
+        // TODO(nv): test this for correctness
+        src.gwrite_with::<&[u8]>((*self.bytes).as_ref(), offset, ())?;
+
+        Ok(*offset)
     }
 }
 
