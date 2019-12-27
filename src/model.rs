@@ -97,8 +97,7 @@ impl MDLXModel {
 
     pub fn write_mdx_file(model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
         // Get total size of mdx file
-        // TODO(nv): I lost somewhere magical 8 bytes. But it seems to be working good...
-        let total_size = model.model_total_size() + 8;
+        let total_size = model.model_total_size();
 
         // Create vec with capacity and set it len to total size
         let mut data = Vec::<u8>::with_capacity(total_size);
@@ -428,8 +427,8 @@ impl BytesTotalSize for VersionChunk {
     fn total_bytes_size(&self) -> usize {
         let mut result = 0usize;
 
-        size_of_val(&self.chunk_size);
-        size_of_val(&self.version);
+        result += size_of_val(&self.chunk_size);
+        result += size_of_val(&self.version);
 
         result
     }
