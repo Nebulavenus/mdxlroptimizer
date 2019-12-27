@@ -97,10 +97,8 @@ impl MDLXModel {
 
     pub fn write_mdx_file(model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
         // Get total size of mdx file
-        // TODO(nv): fix calculation model's total size, probably lost tags bytes...
-        //      find small error, model is loadable now, but not really
-        //      found this error inside bone struct. but now I lost somewhere magical 8 bytes.
-        let mut total_size = model.model_total_size() + 8;
+        // TODO(nv): I lost somewhere magical 8 bytes. But it seems to be working good...
+        let total_size = model.model_total_size() + 8;
 
         // Create vec with capacity and set it len to total size
         let mut data = Vec::<u8>::with_capacity(total_size);
@@ -314,7 +312,7 @@ impl MDLXModel {
                 self.version_chunk = Some(version_chunk);
             },
             MODL_TAG => {
-                let mut model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
+                let model_chunk = data.gread_with::<ModelChunk>(offset, LE)?;
                 self.model_chunk = Some(model_chunk);
             },
             SEQS_TAG => {

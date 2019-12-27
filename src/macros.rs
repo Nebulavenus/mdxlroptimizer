@@ -1,4 +1,4 @@
-use scroll::{ctx, Pread, Pwrite, LE, Endian};
+use scroll::{ctx, Pread, Pwrite, Endian};
 use std::mem::size_of_val;
 
 pub trait BytesTotalSize {
