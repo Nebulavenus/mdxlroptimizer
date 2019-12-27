@@ -1,9 +1,10 @@
 use scroll::{ctx, Pread, Pwrite, LE, Endian};
 use crate::macros::{
     TextureTranslation, TextureRotation, TextureScaling,
-    GeosetColor, GeosetAlpha,
+    GeosetColor, GeosetAlpha, BytesTotalSize,
     GeosetTranslation, GeosetScaling, GeosetRotation,
 };
+use std::mem::size_of_val;
 
 const MDLX_TAG: u32 = 1481393229;
 
@@ -97,7 +98,8 @@ impl MDLXModel {
     pub fn write_mdx_file(model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
         // Get total size of mdx file
         // TODO(nv): fix calculation model's total size, probably lost tags bytes...
-        let mut total_size = model.model_total_size() + 4 + 64;
+        //      find small error, model is loadable now, but not really
+        let mut total_size = model.model_total_size();
 
         // Create vec with capacity and set it len to total size
         let mut data = Vec::<u8>::with_capacity(total_size);
@@ -197,86 +199,108 @@ impl MDLXModel {
 
     fn model_total_size(&self) -> usize {
         let mut result = 0usize;
-        // Tag size and chunk size
+        // MDLX_TAG
+        result += 4;
+        // Tag + size of bytes inside structs
         if self.version_chunk.is_some() {
+            let version = self.version_chunk.as_ref().unwrap();
             result += 4;
-            result += self.version_chunk.as_ref().unwrap().chunk_size as usize;
+            result += version.total_bytes_size();
         }
         if self.model_chunk.is_some() {
+            let model = self.model_chunk.as_ref().unwrap();
             result += 4;
-            result += self.model_chunk.as_ref().unwrap().chunk_size as usize;
+            result += model.total_bytes_size();
         }
         if self.sequence_chunk.is_some() {
+            let sequence = self.sequence_chunk.as_ref().unwrap();
             result += 4;
-            result += self.sequence_chunk.as_ref().unwrap().chunk_size as usize;
+            result += sequence.total_bytes_size();
         }
         if self.global_sequence_chunk.is_some() {
+            let global_sequence = self.global_sequence_chunk.as_ref().unwrap();
             result += 4;
-            result += self.global_sequence_chunk.as_ref().unwrap().chunk_size as usize;
+            result += global_sequence.total_bytes_size();
         }
         if self.texture_chunk.is_some() {
+            let texture = self.texture_chunk.as_ref().unwrap();
             result += 4;
-            result += self.texture_chunk.as_ref().unwrap().chunk_size as usize;
+            result += texture.total_bytes_size();
         }
         if self.texture_animation_chunk.is_some() {
+            let texture_animation = self.texture_animation_chunk.as_ref().unwrap();
             result += 4;
-            result += self.texture_animation_chunk.as_ref().unwrap().chunk_size as usize;
+            result += texture_animation.total_bytes_size();
         }
         if self.geoset_chunk.is_some() {
+            let geoset = self.geoset_chunk.as_ref().unwrap();
             result += 4;
-            result += self.geoset_chunk.as_ref().unwrap().chunk_size as usize;
+            result += geoset.total_bytes_size();
         }
         if self.geoset_animation_chunk.is_some() {
+            let geoset_animation = self.geoset_animation_chunk.as_ref().unwrap();
             result += 4;
-            result += self.geoset_animation_chunk.as_ref().unwrap().chunk_size as usize;
+            result += geoset_animation.total_bytes_size();
         }
         if self.bone_chunk.is_some() {
+            let bone = self.bone_chunk.as_ref().unwrap();
             result += 4;
-            result += self.bone_chunk.as_ref().unwrap().chunk_size as usize;
+            result += bone.total_bytes_size();
         }
         if self.light_chunk.is_some() {
+            let light = self.light_chunk.as_ref().unwrap();
             result += 4;
-            result += self.light_chunk.as_ref().unwrap().chunk_size as usize;
+            result += light.total_bytes_size();
         }
         if self.helper_chunk.is_some() {
+            let helper = self.helper_chunk.as_ref().unwrap();
             result += 4;
-            result += self.helper_chunk.as_ref().unwrap().chunk_size as usize;
+            result += helper.total_bytes_size();
         }
         if self.attachment_chunk.is_some() {
+            let attachment = self.attachment_chunk.as_ref().unwrap();
             result += 4;
-            result += self.attachment_chunk.as_ref().unwrap().chunk_size as usize;
+            result += attachment.total_bytes_size();
         }
         if self.pivot_point_chunk.is_some() {
+            let pivot = self.pivot_point_chunk.as_ref().unwrap();
             result += 4;
-            result += self.pivot_point_chunk.as_ref().unwrap().chunk_size as usize;
+            result += pivot.total_bytes_size();
         }
         if self.particle_emitter_chunk.is_some() {
+            let particle_emitter = self.particle_emitter_chunk.as_ref().unwrap();
             result += 4;
-            result += self.particle_emitter_chunk.as_ref().unwrap().chunk_size as usize;
+            result += particle_emitter.total_bytes_size();
         }
         if self.particle_emitter2_chunk.is_some() {
+            let particle_emitter2 = self.particle_emitter2_chunk.as_ref().unwrap();
             result += 4;
-            result += self.particle_emitter2_chunk.as_ref().unwrap().chunk_size as usize;
+            result += particle_emitter2.total_bytes_size();
         }
         if self.ribbon_emitter_chunk.is_some() {
+            let ribbon_emitter = self.ribbon_emitter_chunk.as_ref().unwrap();
             result += 4;
-            result += self.ribbon_emitter_chunk.as_ref().unwrap().chunk_size as usize;
+            result += ribbon_emitter.total_bytes_size();
         }
         if self.event_object_chunk.is_some() {
+            let event_object = self.event_object_chunk.as_ref().unwrap();
             result += 4;
-            result += self.event_object_chunk.as_ref().unwrap().chunk_size as usize;
+            result += event_object.total_bytes_size();
         }
         if self.camera_chunk.is_some() {
+            let camera = self.camera_chunk.as_ref().unwrap();
             result += 4;
-            result += self.camera_chunk.as_ref().unwrap().chunk_size as usize;
+            result += camera.total_bytes_size();
         }
         if self.collision_shape_chunk.is_some() {
+            let collision_shape = self.collision_shape_chunk.as_ref().unwrap();
             result += 4;
-            result += self.collision_shape_chunk.as_ref().unwrap().chunk_size as usize;
+            result += collision_shape.total_bytes_size();
         }
         if self.material_chunk.is_some() {
+            let material = self.material_chunk.as_ref().unwrap();
             result += 4;
-            result += self.material_chunk.as_ref().unwrap().chunk_size as usize;
+            result += material.total_bytes_size();
         }
 
         result
@@ -401,6 +425,17 @@ impl ctx::TryIntoCtx<Endian> for VersionChunk {
     }
 }
 
+impl BytesTotalSize for VersionChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        size_of_val(&self.chunk_size);
+        size_of_val(&self.version);
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct ModelChunk {
     pub chunk_size: u32,
@@ -482,6 +517,25 @@ impl ctx::TryIntoCtx<Endian> for ModelChunk {
     }
 }
 
+impl BytesTotalSize for ModelChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        let max_name_len = 336usize;
+        result += max_name_len;
+
+        result += size_of_val(&self.unknown);
+        result += size_of_val(&self.bounds_radius);
+        result += size_of_val(&self.minimum_extent);
+        result += size_of_val(&self.maximum_extent);
+        result += size_of_val(&self.blend_time);
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct SequenceChunk {
     pub chunk_size: u32,
@@ -525,6 +579,20 @@ impl ctx::TryIntoCtx<Endian> for SequenceChunk {
         }
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for SequenceChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for sequence in &self.data {
+            result += sequence.total_bytes_size();
+        }
+
+        result
     }
 }
 
@@ -619,6 +687,27 @@ impl ctx::TryIntoCtx<Endian> for Sequence {
     }
 }
 
+impl BytesTotalSize for Sequence {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        let max_name_len = 80usize;
+        result += max_name_len;
+
+        result += size_of_val(&self.interval_start);
+        result += size_of_val(&self.interval_end);
+        result += size_of_val(&self.move_speed);
+        result += size_of_val(&self.non_looping);
+        result += size_of_val(&self.rarity);
+        result += size_of_val(&self.unknown);
+        result += size_of_val(&self.bounds_radius);
+        result += size_of_val(&self.minimum_extent);
+        result += size_of_val(&self.maximum_extent);
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GlobalSequenceChunk {
     pub chunk_size: u32,
@@ -665,6 +754,20 @@ impl ctx::TryIntoCtx<Endian> for GlobalSequenceChunk {
     }
 }
 
+impl BytesTotalSize for GlobalSequenceChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for global_sequence in &self.data {
+            result += global_sequence.total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GlobalSequence {
     pub duration: u32,
@@ -693,6 +796,16 @@ impl ctx::TryIntoCtx<Endian> for GlobalSequence {
         src.gwrite_with::<u32>(self.duration, offset, ctx)?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for GlobalSequence {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.duration);
+
+        result
     }
 }
 
@@ -739,6 +852,20 @@ impl ctx::TryIntoCtx<Endian> for TextureChunk {
         }
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for TextureChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for texture in &self.data {
+            result += texture.total_bytes_size();
+        }
+
+        result
     }
 }
 
@@ -798,6 +925,20 @@ impl ctx::TryIntoCtx<Endian> for Texture {
     }
 }
 
+impl BytesTotalSize for Texture {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.replaceable_id);
+        let max_name_len = 256usize;
+        result += max_name_len;
+        result += size_of_val(&self.unknown);
+        result += size_of_val(&self.flags);
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct TextureAnimationChunk {
     pub chunk_size: u32,
@@ -840,6 +981,20 @@ impl ctx::TryIntoCtx<Endian> for TextureAnimationChunk {
         }
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for TextureAnimationChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for texture_animation in &self.data {
+            result += texture_animation.total_bytes_size();
+        }
+
+        result
     }
 }
 
@@ -920,6 +1075,29 @@ impl ctx::TryIntoCtx<Endian> for TextureAnimation {
     }
 }
 
+impl BytesTotalSize for TextureAnimation {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.inclusive_size);
+
+        if self.texture_translation.is_some() {
+            result += 4;
+            result += self.texture_translation.as_ref().unwrap().total_bytes_size();
+        }
+        if self.texture_rotation.is_some() {
+            result += 4;
+            result += self.texture_rotation.as_ref().unwrap().total_bytes_size();
+        }
+        if self.texture_scaling.is_some() {
+            result += 4;
+            result += self.texture_scaling.as_ref().unwrap().total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct GeosetChunk {
     pub chunk_size: u32,
@@ -959,6 +1137,17 @@ impl ctx::TryIntoCtx<Endian> for GeosetChunk {
         src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for GeosetChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
     }
 }
 
@@ -1004,6 +1193,20 @@ impl ctx::TryIntoCtx<Endian> for GeosetAnimationChunk {
         }
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for GeosetAnimationChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for geoset_animation in &self.data {
+            result += geoset_animation.total_bytes_size();
+        }
+
+        result
     }
 }
 
@@ -1095,6 +1298,29 @@ impl ctx::TryIntoCtx<Endian> for GeosetAnimation {
     }
 }
 
+impl BytesTotalSize for GeosetAnimation {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.inclusive_size);
+        result += size_of_val(&self.alpha);
+        result += size_of_val(&self.flags);
+        result += size_of_val(&self.color);
+        result += size_of_val(&self.geoset_id);
+
+        if self.geoset_alpha.is_some() {
+            result += 4;
+            result += self.geoset_alpha.as_ref().unwrap().total_bytes_size();
+        }
+        if self.geoset_color.is_some() {
+            result += 4;
+            result += self.geoset_color.as_ref().unwrap().total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct BoneChunk {
     pub chunk_size: u32,
@@ -1140,6 +1366,20 @@ impl ctx::TryIntoCtx<Endian> for BoneChunk {
     }
 }
 
+impl BytesTotalSize for BoneChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for bone in &self.data {
+            result += bone.total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct Bone {
     pub inclusive_size: u32,
@@ -1180,6 +1420,19 @@ impl ctx::TryIntoCtx<Endian> for Bone {
         src.gwrite_with::<u32>(self.geoset_animation_id, offset, ctx)?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for Bone {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.inclusive_size);
+        result += &self.node.total_bytes_size();
+        result += size_of_val(&self.geoset_id);
+        result += size_of_val(&self.geoset_animation_id);
+
+        result
     }
 }
 
@@ -1291,6 +1544,36 @@ impl ctx::TryIntoCtx<Endian> for Node {
     }
 }
 
+impl BytesTotalSize for Node {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.inclusive_size);
+
+        let max_name_len = 80usize;
+        result += max_name_len;
+
+        result += size_of_val(&self.object_id);
+        result += size_of_val(&self.parent_id);
+        result += size_of_val(&self.flags);
+
+        if self.geoset_translation.is_some() {
+            result += 4;
+            result += self.geoset_translation.as_ref().unwrap().total_bytes_size();
+        }
+        if self.geoset_rotation.is_some() {
+            result += 4;
+            result += self.geoset_rotation.as_ref().unwrap().total_bytes_size();
+        }
+        if self.geoset_scaling.is_some() {
+            result += 4;
+            result += self.geoset_scaling.as_ref().unwrap().total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct LightChunk {
     pub chunk_size: u32,
@@ -1330,6 +1613,17 @@ impl ctx::TryIntoCtx<Endian> for LightChunk {
         src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for LightChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
     }
 }
 
@@ -1378,6 +1672,20 @@ impl ctx::TryIntoCtx<Endian> for HelperChunk {
     }
 }
 
+impl BytesTotalSize for HelperChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for helper in &self.data {
+            result += helper.total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct Helper {
     pub node: Node,
@@ -1405,6 +1713,16 @@ impl ctx::TryIntoCtx<Endian> for Helper {
         src.gwrite_with::<Node>(self.node, offset, ctx)?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for Helper {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += &self.node.total_bytes_size();
+
+        result
     }
 }
 
@@ -1447,6 +1765,17 @@ impl ctx::TryIntoCtx<Endian> for AttachmentChunk {
         src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for AttachmentChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
     }
 }
 
@@ -1496,6 +1825,20 @@ impl ctx::TryIntoCtx<Endian> for PivotPointChunk {
     }
 }
 
+impl BytesTotalSize for PivotPointChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+
+        for pivot_point in &self.data {
+            result += pivot_point.total_bytes_size();
+        }
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct PivotPoint {
     pub position: [f32; 3],
@@ -1530,6 +1873,16 @@ impl ctx::TryIntoCtx<Endian> for PivotPoint {
         }
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for PivotPoint {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.position);
+
+        result
     }
 }
 
@@ -1575,6 +1928,17 @@ impl ctx::TryIntoCtx<Endian> for ParticleEmitterChunk {
     }
 }
 
+impl BytesTotalSize for ParticleEmitterChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct ParticleEmitter2Chunk {
     pub chunk_size: u32,
@@ -1614,6 +1978,17 @@ impl ctx::TryIntoCtx<Endian> for ParticleEmitter2Chunk {
         src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for ParticleEmitter2Chunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
     }
 }
 
@@ -1659,6 +2034,17 @@ impl ctx::TryIntoCtx<Endian> for RibbonEmitterChunk {
     }
 }
 
+impl BytesTotalSize for RibbonEmitterChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct EventObjectChunk {
     pub chunk_size: u32,
@@ -1698,6 +2084,17 @@ impl ctx::TryIntoCtx<Endian> for EventObjectChunk {
         src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for EventObjectChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
     }
 }
 
@@ -1743,6 +2140,17 @@ impl ctx::TryIntoCtx<Endian> for CameraChunk {
     }
 }
 
+impl BytesTotalSize for CameraChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct CollisionShapeChunk {
     pub chunk_size: u32,
@@ -1782,6 +2190,17 @@ impl ctx::TryIntoCtx<Endian> for CollisionShapeChunk {
         src.gwrite_with::<&[u8]>(self.bytes.as_slice(), offset, ())?;
 
         Ok(*offset)
+    }
+}
+
+impl BytesTotalSize for CollisionShapeChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
     }
 }
 
@@ -1827,6 +2246,17 @@ impl ctx::TryIntoCtx<Endian> for MaterialChunk {
     }
 }
 
+impl BytesTotalSize for MaterialChunk {
+    fn total_bytes_size(&self) -> usize {
+        let mut result = 0usize;
+
+        result += size_of_val(&self.chunk_size);
+        result += &self.bytes.capacity();
+
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1836,10 +2266,11 @@ mod tests {
     fn read_mdx_file_api() {
         //let raw_data = fs::read("testfiles/base_model.mdx").unwrap();
         //let raw_data = fs::read("testfiles/druidcat.mdx").unwrap();
-        let raw_data = fs::read("testfiles/herochaos.mdx").unwrap();
-        //let raw_data = fs::read("testfiles/chaoswarrior.mdx").unwrap();
-        dbg!(&raw_data.len());
+        //let raw_data = fs::read("testfiles/herochaos.mdx").unwrap();
+        let raw_data = fs::read("testfiles/chaoswarrior.mdx").unwrap();
+        //dbg!(&raw_data.len());
         let model = MDLXModel::read_mdx_file(raw_data.clone()).unwrap();
+        dbg!(&raw_data.len());
         dbg!(&model.model_total_size());
 
         let bytes = MDLXModel::write_mdx_file(model).unwrap();

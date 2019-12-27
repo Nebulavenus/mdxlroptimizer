@@ -1,4 +1,9 @@
 use scroll::{ctx, Pread, Pwrite, LE, Endian};
+use std::mem::size_of_val;
+
+pub trait BytesTotalSize {
+    fn total_bytes_size(&self) -> usize;
+}
 
 macro_rules! create_named_track {
     ($name:ident, $typ:ty, $size:expr) => {
@@ -55,6 +60,21 @@ macro_rules! create_named_track {
                 }
 
                 Ok(*offset)
+            }
+        }
+
+        impl BytesTotalSize for $name {
+            fn total_bytes_size(&self) -> usize {
+                let mut result = 0usize;
+                result += size_of_val(&self.time);
+                result += size_of_val(&self.value);
+                if self.in_tan.is_some() {
+                    result += size_of_val(self.in_tan.as_ref().unwrap());
+                }
+                if self.out_tan.is_some() {
+                    result += size_of_val(self.out_tan.as_ref().unwrap());
+                }
+                result
             }
         }
     };
@@ -124,6 +144,22 @@ macro_rules! create_named_translation {
                 }
 
                 Ok(*offset)
+            }
+        }
+
+        impl BytesTotalSize for $name {
+            fn total_bytes_size(&self) -> usize {
+                let mut result = 0usize;
+
+                result += size_of_val(&self.number_of_tracks);
+                result += size_of_val(&self.interpolation_type);
+                result += size_of_val(&self.global_sequence_id);
+
+                for track in &self.data {
+                    result += track.total_bytes_size();
+                }
+
+                result
             }
         }
     };
