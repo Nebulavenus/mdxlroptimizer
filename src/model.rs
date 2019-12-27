@@ -99,7 +99,8 @@ impl MDLXModel {
         // Get total size of mdx file
         // TODO(nv): fix calculation model's total size, probably lost tags bytes...
         //      find small error, model is loadable now, but not really
-        let mut total_size = model.model_total_size();
+        //      found this error inside bone struct. but now I lost somewhere magical 8 bytes.
+        let mut total_size = model.model_total_size() + 8;
 
         // Create vec with capacity and set it len to total size
         let mut data = Vec::<u8>::with_capacity(total_size);
@@ -1339,7 +1340,7 @@ impl ctx::TryFromCtx<'_, Endian> for BoneChunk {
         let mut total_size = 0u32;
         while total_size < chunk_size {
             let bone = src.gread_with::<Bone>(offset, ctx)?;
-            total_size += bone.inclusive_size;
+            total_size += bone.node.inclusive_size + 4 + 4;
             data.push(bone);
         }
 
@@ -1382,8 +1383,6 @@ impl BytesTotalSize for BoneChunk {
 
 #[derive(PartialEq, Debug)]
 pub struct Bone {
-    pub inclusive_size: u32,
-
     pub node: Node,
     pub geoset_id: u32,
     pub geoset_animation_id: u32,
@@ -1397,11 +1396,8 @@ impl ctx::TryFromCtx<'_, Endian> for Bone {
         let node = src.gread_with::<Node>(offset, ctx)?;
         let geoset_id = src.gread_with::<u32>(offset, ctx)?;
         let geoset_animation_id = src.gread_with::<u32>(offset, ctx)?;
-        // Node inclusive_size + two u32 inside bone struct
-        let inclusive_size = node.inclusive_size + 4 + 4;
 
         Ok((Bone {
-            inclusive_size,
             node,
             geoset_id,
             geoset_animation_id,
@@ -1427,7 +1423,6 @@ impl BytesTotalSize for Bone {
     fn total_bytes_size(&self) -> usize {
         let mut result = 0usize;
 
-        result += size_of_val(&self.inclusive_size);
         result += &self.node.total_bytes_size();
         result += size_of_val(&self.geoset_id);
         result += size_of_val(&self.geoset_animation_id);
@@ -2268,12 +2263,11 @@ mod tests {
         //let raw_data = fs::read("testfiles/druidcat.mdx").unwrap();
         //let raw_data = fs::read("testfiles/herochaos.mdx").unwrap();
         let raw_data = fs::read("testfiles/chaoswarrior.mdx").unwrap();
-        //dbg!(&raw_data.len());
         let model = MDLXModel::read_mdx_file(raw_data.clone()).unwrap();
         dbg!(&raw_data.len());
         dbg!(&model.model_total_size());
 
-        let bytes = MDLXModel::write_mdx_file(model).unwrap();
+        let mut bytes = MDLXModel::write_mdx_file(model).unwrap();
         dbg!(&bytes.len());
         fs::write("testfiles/chaoswarrior_resave.mdx", bytes).unwrap();
     }
