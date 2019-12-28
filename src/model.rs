@@ -64,6 +64,41 @@ pub struct MDLXModel {
     pub material_chunk: Option<MaterialChunk>,
 }
 
+macro_rules! calculate_chunk_size_impl {
+    ($name:ident) => {
+        impl $name {
+            // Chunk size is a struct size without chunk_size itself.
+            pub fn calculate_chunk_size(&mut self) {
+                //dbg!($name);
+                dbg!(&self.chunk_size);
+                self.chunk_size = self.total_bytes_size() as u32 - 4;
+                dbg!(&self.chunk_size);
+            }
+        }
+    };
+}
+
+calculate_chunk_size_impl!(VersionChunk);
+calculate_chunk_size_impl!(ModelChunk);
+calculate_chunk_size_impl!(SequenceChunk);
+calculate_chunk_size_impl!(GlobalSequenceChunk);
+calculate_chunk_size_impl!(TextureChunk);
+calculate_chunk_size_impl!(TextureAnimationChunk);
+calculate_chunk_size_impl!(GeosetChunk);
+calculate_chunk_size_impl!(GeosetAnimationChunk);
+calculate_chunk_size_impl!(BoneChunk);
+calculate_chunk_size_impl!(LightChunk);
+calculate_chunk_size_impl!(HelperChunk);
+calculate_chunk_size_impl!(AttachmentChunk);
+calculate_chunk_size_impl!(PivotPointChunk);
+calculate_chunk_size_impl!(ParticleEmitterChunk);
+calculate_chunk_size_impl!(ParticleEmitter2Chunk);
+calculate_chunk_size_impl!(RibbonEmitterChunk);
+calculate_chunk_size_impl!(EventObjectChunk);
+calculate_chunk_size_impl!(CameraChunk);
+calculate_chunk_size_impl!(CollisionShapeChunk);
+calculate_chunk_size_impl!(MaterialChunk);
+
 impl MDLXModel {
     pub fn read_mdx_file(data: Vec<u8>) -> Result<MDLXModel, scroll::Error> {
         let offset = &mut 0usize;
@@ -95,8 +130,9 @@ impl MDLXModel {
         }
     }
 
-    pub fn write_mdx_file(model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
+    pub fn write_mdx_file(mut model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
         // Get total size of mdx file
+        model.correct_chunk_size();
         let total_size = model.model_total_size();
 
         // Create vec with capacity and set it len to total size
@@ -193,6 +229,89 @@ impl MDLXModel {
 
         // Return result
         Ok(data)
+    }
+
+    fn correct_chunk_size(&mut self) {
+        if self.version_chunk.is_some() {
+            let version = self.version_chunk.as_mut().unwrap();
+            version.calculate_chunk_size();
+        }
+        if self.model_chunk.is_some() {
+            let model = self.model_chunk.as_mut().unwrap();
+            model.calculate_chunk_size();
+        }
+        if self.sequence_chunk.is_some() {
+            let sequence = self.sequence_chunk.as_mut().unwrap();
+            sequence.calculate_chunk_size();
+        }
+        if self.global_sequence_chunk.is_some() {
+            let global_sequence = self.global_sequence_chunk.as_mut().unwrap();
+            global_sequence.calculate_chunk_size();
+        }
+        if self.texture_chunk.is_some() {
+            let texture = self.texture_chunk.as_mut().unwrap();
+            texture.calculate_chunk_size();
+        }
+        if self.texture_animation_chunk.is_some() {
+            let texture_animation = self.texture_animation_chunk.as_mut().unwrap();
+            texture_animation.calculate_chunk_size();
+        }
+        if self.geoset_chunk.is_some() {
+            let geoset = self.geoset_chunk.as_mut().unwrap();
+            geoset.calculate_chunk_size();
+        }
+        if self.geoset_animation_chunk.is_some() {
+            let geoset_animation = self.geoset_animation_chunk.as_mut().unwrap();
+            geoset_animation.calculate_chunk_size();
+        }
+        if self.bone_chunk.is_some() {
+            let bone = self.bone_chunk.as_mut().unwrap();
+            bone.calculate_chunk_size();
+        }
+        if self.light_chunk.is_some() {
+            let light = self.light_chunk.as_mut().unwrap();
+            light.calculate_chunk_size();
+        }
+        if self.helper_chunk.is_some() {
+            let helper = self.helper_chunk.as_mut().unwrap();
+            helper.calculate_chunk_size();
+        }
+        if self.attachment_chunk.is_some() {
+            let attachment = self.attachment_chunk.as_mut().unwrap();
+            attachment.calculate_chunk_size();
+        }
+        if self.pivot_point_chunk.is_some() {
+            let pivot = self.pivot_point_chunk.as_mut().unwrap();
+            pivot.calculate_chunk_size();
+        }
+        if self.particle_emitter_chunk.is_some() {
+            let particle_emitter = self.particle_emitter_chunk.as_mut().unwrap();
+            particle_emitter.calculate_chunk_size();
+        }
+        if self.particle_emitter2_chunk.is_some() {
+            let particle_emitter2 = self.particle_emitter2_chunk.as_mut().unwrap();
+            particle_emitter2.calculate_chunk_size();
+        }
+        if self.ribbon_emitter_chunk.is_some() {
+            let ribbon_emitter = self.ribbon_emitter_chunk.as_mut().unwrap();
+            ribbon_emitter.calculate_chunk_size();
+        }
+        if self.event_object_chunk.is_some() {
+            let event_object = self.event_object_chunk.as_mut().unwrap();
+            event_object.calculate_chunk_size();
+        }
+        if self.camera_chunk.is_some() {
+            let camera = self.camera_chunk.as_mut().unwrap();
+            camera.calculate_chunk_size();
+        }
+        if self.collision_shape_chunk.is_some() {
+            let collision_shape = self.collision_shape_chunk.as_mut().unwrap();
+            collision_shape.calculate_chunk_size();
+        }
+        if self.material_chunk.is_some() {
+            let material = self.material_chunk.as_mut().unwrap();
+            material.calculate_chunk_size();
+        }
     }
 
     fn model_total_size(&self) -> usize {

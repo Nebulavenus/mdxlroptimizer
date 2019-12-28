@@ -7,7 +7,7 @@ pub trait BytesTotalSize {
 
 macro_rules! create_named_track {
     ($name:ident, $typ:ty, $size:expr) => {
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Debug, Clone)]
         pub struct $name {
             pub time: u32,
             pub value: [$typ; $size],
@@ -73,6 +73,22 @@ macro_rules! create_named_track {
                 }
                 if self.out_tan.is_some() {
                     result += size_of_val(self.out_tan.as_ref().unwrap());
+                }
+                result
+            }
+        }
+
+        impl $name {
+            pub fn compare_values(&self, other: &Self, threshold: f32) -> bool {
+                let mut result = true;
+                for (idx, value) in self.value.iter().enumerate() {
+                    let other_value = other.value[idx];
+
+                    let diff = value - other_value;
+
+                    if diff < -threshold || diff > threshold {
+                        result = false;
+                    }
                 }
                 result
             }
@@ -160,6 +176,46 @@ macro_rules! create_named_translation {
                 }
 
                 result
+            }
+        }
+
+        impl $name {
+            pub fn optimize(&mut self, special_frames: Vec<u32>, threshold: f32, linearize: bool) {
+
+                if self.interpolation_type > 1 && linearize {
+                    // Set to linear
+                    self.interpolation_type = 1;
+
+                    for track in self.data.iter_mut() {
+                        track.in_tan = None;
+                        track.out_tan = None;
+                    }
+                }
+
+                if self.data.len() > 2 {
+                    let mut result = Vec::new();
+
+                    result.push(self.data[0].clone());
+
+                    for idx in 1..self.data.len() - 1 {
+                        let first_track = self.data[idx - 1].clone();
+                        let second_track = self.data[idx].clone();
+                        let third_track = self.data[idx + 1].clone();
+
+                        if   special_frames.contains(&second_track.time) ||
+                            !first_track.compare_values(&second_track, threshold) ||
+                            !second_track.compare_values(&third_track, threshold)
+                        {
+                            result.push(second_track);
+                        } else {
+                            reduced_size += second_track.total_bytes_size();
+                        }
+                    }
+
+                    result.push(self.data[self.data.len() - 1].clone());
+
+                    self.data = result;
+                }
             }
         }
     };

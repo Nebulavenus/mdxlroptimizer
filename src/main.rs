@@ -8,11 +8,13 @@ use std::fs::File;
 use std::io::Read;
 use std::fs;
 use crate::model::MDLXModel;
+use crate::optimizer::optimize_model;
 
 mod model;
 mod macros;
+mod optimizer;
 
-pub fn parse_optimize_model(path: &Path, _threshold: f64, _outside: bool, _linearize: bool) {
+pub fn parse_optimize_model(path: &Path, threshold: f32, outside: bool, linearize: bool) {
     // Read bytes from mdx file at specific path
     let file_name = path.file_stem().unwrap();
     let mut file = File::open(path).expect("cannot find file");
@@ -23,14 +25,17 @@ pub fn parse_optimize_model(path: &Path, _threshold: f64, _outside: bool, _linea
     let original_bytes_len = bytes.len();
 
     // Read mdx file into struct
-    let model = MDLXModel::read_mdx_file(bytes).unwrap();
+    let mut model = MDLXModel::read_mdx_file(bytes).unwrap();
+
+    // Optimize model
+    optimize_model(&mut model, threshold, linearize, outside);
 
     // Write mdx file into bytes vec
     let new_bytes = MDLXModel::write_mdx_file(model).unwrap();
 
     let new_bytes_len = new_bytes.len();
 
-    println!("Original: {} - Resaved: {}", original_bytes_len, new_bytes_len);
+    println!("Original size: {} - Optimized size: {}", original_bytes_len, new_bytes_len);
 
     // Write bytes
     let new_file_name =
@@ -64,9 +69,9 @@ fn main() {
         )
         .get_matches();
 
-    let mut threshold = 0f64;
+    let mut threshold = 0f32;
     if let Some(th) = matches.value_of("threshold") {
-        let new_th = th.parse::<f64>()
+        let new_th = th.parse::<f32>()
             .expect("entered threshold value is not correct");
         if new_th.is_sign_negative() {
             println!("Threshold can't be negative, default value will be used");
