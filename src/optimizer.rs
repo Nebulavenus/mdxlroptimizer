@@ -1,5 +1,6 @@
 use std::ops::RangeInclusive;
 use crate::model::MDLXModel;
+use crate::macros::BytesTotalSize;
 
 pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, outside: bool) {
     let mut special_frames = Vec::<u32>::new();
@@ -33,6 +34,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
                 let geoset = bone.node.geoset_scaling.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
+
+            bone.node.inclusive_size = bone.node.total_bytes_size() as u32;
         }
     }
 
@@ -51,6 +54,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
                 let geoset = helper.node.geoset_scaling.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
+
+            helper.node.inclusive_size = helper.node.total_bytes_size() as u32;
         }
     }
 }

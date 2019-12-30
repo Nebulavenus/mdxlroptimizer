@@ -132,8 +132,8 @@ impl MDLXModel {
 
     pub fn write_mdx_file(mut model: MDLXModel) -> Result<Vec<u8>, scroll::Error> {
         // Get total size of mdx file
-        model.correct_chunk_size();
         let total_size = model.model_total_size();
+        model.correct_chunk_size();
 
         // Create vec with capacity and set it len to total size
         let mut data = Vec::<u8>::with_capacity(total_size);
@@ -1592,6 +1592,7 @@ impl ctx::TryFromCtx<'_, Endian> for Node {
 
         while (*offset as u32) < inclusive_size {
 
+            dbg!(&offset);
             let tag = src.gread_with::<u32>(offset, LE).unwrap();
             dbg!(format!("{:X}", &tag));
             dbg!(&tag);

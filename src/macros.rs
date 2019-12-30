@@ -98,7 +98,7 @@ macro_rules! create_named_track {
 
 macro_rules! create_named_translation {
    ($name:ident, $track:ty, $typ:ty, $size:expr) => {
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Debug, Clone)]
         pub struct $name {
             pub number_of_tracks: u32,
             pub interpolation_type: u32,
@@ -207,13 +207,12 @@ macro_rules! create_named_translation {
                             !second_track.compare_values(&third_track, threshold)
                         {
                             result.push(second_track);
-                        } else {
-                            reduced_size += second_track.total_bytes_size();
                         }
                     }
 
                     result.push(self.data[self.data.len() - 1].clone());
 
+                    self.number_of_tracks = result.len() as u32;
                     self.data = result;
                 }
             }

@@ -80,15 +80,8 @@ fn main() {
         }
     }
 
-    let mut outside = false;
-    if matches.is_present("outside") {
-        outside = true;
-    }
-
-    let mut linearize = false;
-    if matches.is_present("linearize") {
-        linearize = true;
-    }
+    let mut outside = matches.is_present("outside");
+    let mut linearize = matches.is_present("linearize");
 
     if let Some(ref matches) = matches.subcommand_matches("optimize") {
         let file = matches.value_of("input").unwrap();
