@@ -8,3 +8,5 @@ edition = "2018"
 clap = "2.33.0"
 scroll = "0.10"
 scroll_derive = "0.10"
+paste = "0.1.6"
+nebula-mdx = { git = "https://github.com/Nebulavenus/nebula-mdx.git" }

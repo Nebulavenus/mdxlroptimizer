@@ -1,16 +1,18 @@
 extern crate scroll;
 #[macro_use]
 extern crate clap;
+extern crate nebula_mdx;
+#[macro_use]
+extern crate paste;
 
 use clap::{App, Arg, SubCommand};
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 use std::fs;
-use crate::model::MDLXModel;
 use crate::optimizer::optimize_model;
+use nebula_mdx::MDLXModel;
 
-mod model;
 mod macros;
 mod optimizer;
 

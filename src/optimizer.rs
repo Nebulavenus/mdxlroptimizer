@@ -1,6 +1,7 @@
 use std::ops::RangeInclusive;
-use crate::model::MDLXModel;
-use crate::macros::BytesTotalSize;
+use nebula_mdx::MDLXModel;
+use nebula_mdx::chunks::BytesTotalSize;
+use crate::macros::*;
 
 pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, outside: bool) {
     let mut special_frames = Vec::<u32>::new();
@@ -23,15 +24,18 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
         let bones = model.bone_chunk.as_mut().unwrap();
         for bone in bones.data.iter_mut() {
             if bone.node.geoset_translation.is_some() {
-                let geoset = bone.node.geoset_translation.as_mut().unwrap();
+                let mut geoset = CopyGeosetTranslation::from(bone.node.geoset_translation.as_mut().unwrap());
+                //let geoset = bone.node.geoset_translation.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
             if bone.node.geoset_rotation.is_some() {
-                let geoset = bone.node.geoset_rotation.as_mut().unwrap();
+                let mut geoset = CopyGeosetRotation::from(bone.node.geoset_rotation.as_mut().unwrap());
+                //let geoset = bone.node.geoset_rotation.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
             if bone.node.geoset_scaling.is_some() {
-                let geoset = bone.node.geoset_scaling.as_mut().unwrap();
+                let mut geoset = CopyGeosetScaling::from(bone.node.geoset_scaling.as_mut().unwrap());
+                //let geoset = bone.node.geoset_scaling.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
 
@@ -43,15 +47,18 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
         let helpers = model.helper_chunk.as_mut().unwrap();
         for helper in helpers.data.iter_mut() {
             if helper.node.geoset_translation.is_some() {
-                let geoset = helper.node.geoset_translation.as_mut().unwrap();
+                let mut geoset = CopyGeosetTranslation::from(helper.node.geoset_translation.as_mut().unwrap());
+                //let geoset = helper.node.geoset_translation.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
             if helper.node.geoset_rotation.is_some() {
-                let geoset = helper.node.geoset_rotation.as_mut().unwrap();
+                let mut geoset = CopyGeosetRotation::from(helper.node.geoset_rotation.as_mut().unwrap());
+                //let geoset = helper.node.geoset_rotation.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
             if helper.node.geoset_scaling.is_some() {
-                let geoset = helper.node.geoset_scaling.as_mut().unwrap();
+                let mut geoset = CopyGeosetScaling::from(helper.node.geoset_scaling.as_mut().unwrap());
+                //let geoset = helper.node.geoset_scaling.as_mut().unwrap();
                 geoset.optimize(special_frames.clone(), threshold, linearize);
             }
 
