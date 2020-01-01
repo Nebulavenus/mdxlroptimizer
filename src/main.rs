@@ -2,8 +2,6 @@ extern crate scroll;
 #[macro_use]
 extern crate clap;
 extern crate nebula_mdx;
-#[macro_use]
-extern crate paste;
 
 use clap::{App, Arg, SubCommand};
 use std::path::Path;
@@ -82,8 +80,8 @@ fn main() {
         }
     }
 
-    let mut outside = matches.is_present("outside");
-    let mut linearize = matches.is_present("linearize");
+    let outside = matches.is_present("outside");
+    let linearize = matches.is_present("linearize");
 
     if let Some(ref matches) = matches.subcommand_matches("optimize") {
         let file = matches.value_of("input").unwrap();
