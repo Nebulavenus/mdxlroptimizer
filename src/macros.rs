@@ -2,6 +2,7 @@ use nebula_mdx::chunks::{
     GeosetTranslationTrack, GeosetRotationTrack, GeosetScalingTrack,
     GeosetTranslation, GeosetRotation, GeosetScaling,
 };
+use std::ops::RangeInclusive;
 
 pub trait CompareValues {
     fn compare_values(&self, other: &Self, threshold: f32) -> bool;
@@ -80,3 +81,39 @@ macro_rules! optimize_frames_impl {
 optimize_frames_impl!(GeosetTranslation);
 optimize_frames_impl!(GeosetRotation);
 optimize_frames_impl!(GeosetScaling);
+
+pub trait InRangeFrames {
+    fn in_range_frames(&mut self, anim_frame_ranges: Vec<RangeInclusive<u32>>);
+}
+
+macro_rules! in_range_frames_impl {
+    ($name:ident) => {
+        impl InRangeFrames for $name {
+            fn in_range_frames(&mut self, anim_frame_ranges: Vec<RangeInclusive<u32>>) {
+
+                if !self.data.is_empty() {
+                    let mut result = Vec::new();
+
+                    for track in self.data.iter() {
+                        let key = track.time;
+                        let frame_in_range = anim_frame_ranges
+                            .iter()
+                            .any(|range| range.contains(&key));
+
+                        if frame_in_range {
+                            result.push(track.clone());
+                        }
+                    }
+
+                    self.number_of_tracks = result.len() as u32;
+                    self.data = result;
+                }
+
+            }
+        }
+    }
+}
+
+in_range_frames_impl!(GeosetTranslation);
+in_range_frames_impl!(GeosetRotation);
+in_range_frames_impl!(GeosetScaling);
