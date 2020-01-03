@@ -1,0 +1,40 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        name: [mdxlroptimizer]
+        include:
+          - name: linux
+            os: ubuntu-latest
+            artifact_name: <name>
+            asset_name: <name>-linux
+          - name: windows
+            os: windows-latest
+            artifact_name: <name>.exe
+            asset_name: <name>-windows
+          - name: macos
+            os: macos-latest
+            artifact_name: <name>
+            asset_name: <name>-macos
+
+    steps:
+    - uses: actions/checkout@v1
+    
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+    
+    - name: Build
+      run: cargo build --release --verbose
+    
+    - uses: actions/upload-artifact@v1
+      with:
+        name: ${{ matrix.asset_name }}
+        path: target/release/${{ matrix.artifact_name }}
