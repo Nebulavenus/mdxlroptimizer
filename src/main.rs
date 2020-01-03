@@ -1,7 +1,8 @@
-extern crate scroll;
 #[macro_use]
 extern crate clap;
 extern crate nebula_mdx;
+extern crate flexi_logger;
+extern crate log;
 
 use clap::{App, Arg, SubCommand};
 use std::path::Path;
@@ -10,6 +11,8 @@ use std::io::Read;
 use std::fs;
 use crate::optimizer::optimize_model;
 use nebula_mdx::MDLXModel;
+use flexi_logger::{Logger, default_format};
+use log::{info, warn};
 
 mod macros;
 mod optimizer;
@@ -35,12 +38,30 @@ pub fn parse_optimize_model(path: &Path, threshold: f32, outside: bool, lineariz
 
     let new_bytes_len = new_bytes.len();
 
-    println!("Original size: {} - Optimized size: {}", original_bytes_len, new_bytes_len);
+    info!("Original size: {} - Optimized size: {}", original_bytes_len, new_bytes_len);
 
     // Write bytes
     let new_file_name =
         String::from(file_name.to_str().unwrap()) + String::from("_optimized.mdx").as_ref();
+
+    info!("Writing data into file name: {}", &new_file_name);
     fs::write(new_file_name, new_bytes).unwrap();
+}
+
+fn setup_logger(log: bool) {
+    if log {
+        Logger::with_env_or_str("mdxlroptimizer=debug, nebula_mdx=debug")
+            .log_to_file()
+            .directory("logs")
+            .format(default_format)
+            .start()
+            .unwrap();
+    } else {
+        Logger::with_env_or_str("mdxlroptimizer=debug")
+            .format(default_format)
+            .start()
+            .unwrap();
+    }
 }
 
 fn main() {
@@ -48,6 +69,9 @@ fn main() {
         .version(crate_version!())
         .about("Tool for optimizing mdx files.")
         .author("Nebula Venus (Github)")
+        .arg(Arg::with_name("log")
+            .help("Writes everything into a log file")
+            .long("log"))
         .arg(Arg::with_name("outside")
             .help("Delete redundant frames but outside anim sequences")
             .long("outside"))
@@ -69,22 +93,30 @@ fn main() {
         )
         .get_matches();
 
+    let log = matches.is_present("log");
+    setup_logger(log);
+    info!("Log is present? {}", log);
+
     let mut threshold = 0f32;
     if let Some(th) = matches.value_of("threshold") {
         let new_th = th.parse::<f32>()
             .expect("entered threshold value is not correct");
         if new_th.is_sign_negative() {
-            println!("Threshold can't be negative, default value will be used");
+            warn!("Threshold can't be negative, default value will be used");
         } else {
             threshold = new_th;
         }
     }
+    info!("Threshold value: {}", threshold);
 
     let outside = matches.is_present("outside");
+    info!("Outside is present? {}", outside);
     let linearize = matches.is_present("linearize");
+    info!("Linearize is present? {}", linearize);
 
     if let Some(ref matches) = matches.subcommand_matches("optimize") {
         let file = matches.value_of("input").unwrap();
+        info!("Processing file with name: {}", file);
         parse_optimize_model(file.as_ref(), threshold, outside, linearize);
     }
 }

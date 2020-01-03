@@ -1,4 +1,6 @@
-## mdxlroptimizer
+# mdxlroptimizer
+[![GitHub Actions Workflow](https://github.com/Nebulavenus/mdxlroptimizer/workflows/Build/badge.svg)](https://github.com/Nebulavenus/mdxlroptimizer/actions)
+[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Nebulavenus/mdxlroptimizer/blob/master/LICENSE)
 
 Tool for optimizing the size of .mdx files used in warcraft 3.
 Currently works only for 1.26 patch. Support for new patches planned.
@@ -11,6 +13,7 @@ USAGE:
 FLAGS:
     -h, --help         Prints help information
         --linearize    Converts hermite/bezier to linear. Simplify keyframes
+        --log          Writes everything into a log file
         --outside      Delete redundant frames but outside anim sequences
     -V, --version      Prints version information
 
