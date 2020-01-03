@@ -8,20 +8,25 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        name: [mdxlroptimizer]
+        name: [
+            linux,
+            windows,
+            macos
+        ]
+
         include:
           - name: linux
             os: ubuntu-latest
-            artifact_name: <name>
-            asset_name: <name>-linux
+            artifact_name: mdxlroptimizer
+            asset_name: mdxlroptimizer-linux
           - name: windows
             os: windows-latest
-            artifact_name: <name>.exe
-            asset_name: <name>-windows
+            artifact_name: mdxlroptimizer.exe
+            asset_name: mdxlroptimizer-windows
           - name: macos
             os: macos-latest
-            artifact_name: <name>
-            asset_name: <name>-macos
+            artifact_name: mdxlroptimizer
+            asset_name: mdxlroptimizer-macos
 
     steps:
     - uses: actions/checkout@v1
