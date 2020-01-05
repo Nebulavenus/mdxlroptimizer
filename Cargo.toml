@@ -14,4 +14,4 @@ opt-level = 'z'
 log = "0.4.8"
 flexi_logger = { version = "0.14.5", default_features = true }
 clap = "2.33.0"
-nebula-mdx = { git = "https://github.com/Nebulavenus/nebula-mdx.git" }
+nebula-mdx = { git = "https://github.com/Nebulavenus/nebula-mdx.git", tag = "0.1.0" }
