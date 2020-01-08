@@ -1,6 +1,6 @@
 use nebula_mdx::chunks::{
-    GeosetTranslationTrack, GeosetRotationTrack, GeosetScalingTrack,
-    GeosetTranslation, GeosetRotation, GeosetScaling,
+    GeosetRotation, GeosetRotationTrack, GeosetScaling, GeosetScalingTrack, GeosetTranslation,
+    GeosetTranslationTrack,
 };
 use std::ops::RangeInclusive;
 
@@ -11,7 +11,7 @@ pub trait CompareValues {
 macro_rules! compare_values_impl {
     ($name:ident) => {
         impl CompareValues for $name {
-           fn compare_values(&self, other: &Self, threshold: f32) -> bool {
+            fn compare_values(&self, other: &Self, threshold: f32) -> bool {
                 let mut result = true;
                 for (idx, value) in self.value.iter().enumerate() {
                     let other_value = other.value[idx];
@@ -25,7 +25,7 @@ macro_rules! compare_values_impl {
                 result
             }
         }
-    }
+    };
 }
 
 compare_values_impl!(GeosetTranslationTrack);
@@ -60,9 +60,9 @@ macro_rules! optimize_frames_impl {
                         let second_track = self.data[idx].clone();
                         let third_track = self.data[idx + 1].clone();
 
-                        if   special_frames.contains(&second_track.time) ||
-                            !first_track.compare_values(&second_track, threshold) ||
-                            !second_track.compare_values(&third_track, threshold)
+                        if special_frames.contains(&second_track.time)
+                            || !first_track.compare_values(&second_track, threshold)
+                            || !second_track.compare_values(&third_track, threshold)
                         {
                             result.push(second_track);
                         }
@@ -75,7 +75,7 @@ macro_rules! optimize_frames_impl {
                 }
             }
         }
-    }
+    };
 }
 
 optimize_frames_impl!(GeosetTranslation);
@@ -90,15 +90,13 @@ macro_rules! in_range_frames_impl {
     ($name:ident) => {
         impl InRangeFrames for $name {
             fn in_range_frames(&mut self, anim_frame_ranges: Vec<RangeInclusive<u32>>) {
-
                 if !self.data.is_empty() {
                     let mut result = Vec::new();
 
                     for track in self.data.iter() {
                         let key = track.time;
-                        let frame_in_range = anim_frame_ranges
-                            .iter()
-                            .any(|range| range.contains(&key));
+                        let frame_in_range =
+                            anim_frame_ranges.iter().any(|range| range.contains(&key));
 
                         if frame_in_range {
                             result.push(track.clone());
@@ -108,10 +106,9 @@ macro_rules! in_range_frames_impl {
                     self.number_of_tracks = result.len() as u32;
                     self.data = result;
                 }
-
             }
         }
-    }
+    };
 }
 
 in_range_frames_impl!(GeosetTranslation);

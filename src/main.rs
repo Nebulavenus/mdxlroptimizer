@@ -1,18 +1,17 @@
-#[macro_use]
-extern crate clap;
-extern crate nebula_mdx;
 extern crate flexi_logger;
 extern crate log;
+extern crate nebula_mdx;
+extern crate structopt;
 
-use clap::{App, Arg, SubCommand};
-use std::path::Path;
+use crate::optimizer::optimize_model;
+use flexi_logger::{default_format, Logger};
+use log::info;
+use nebula_mdx::MDLXModel;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::fs;
-use crate::optimizer::optimize_model;
-use nebula_mdx::MDLXModel;
-use flexi_logger::{Logger, default_format};
-use log::{info, warn};
+use std::path::{Path, PathBuf};
+use structopt::StructOpt;
 
 mod macros;
 mod optimizer;
@@ -38,7 +37,10 @@ pub fn parse_optimize_model(path: &Path, threshold: f32, outside: bool, lineariz
 
     let new_bytes_len = new_bytes.len();
 
-    info!("Original size: {} - Optimized size: {}", original_bytes_len, new_bytes_len);
+    info!(
+        "Original size: {} - Optimized size: {}",
+        original_bytes_len, new_bytes_len
+    );
 
     // Write bytes
     let new_file_name =
@@ -64,59 +66,43 @@ fn setup_logger(log: bool) {
     }
 }
 
+/// Tool for optimizing mdx files.
+#[derive(StructOpt, Debug)]
+#[structopt(name = "Mdlxroptimizer", author)]
+struct Opt {
+    /// Log everything into a file
+    #[structopt(long)]
+    log: bool,
+
+    /// Deletes keyframes outside of animation sequences
+    #[structopt(long)]
+    outside: bool,
+
+    /// Converts Hermite/Bezier interpolation to Linear
+    #[structopt(long)]
+    linearize: bool,
+
+    /// Similar keyframes with a threshold difference
+    #[structopt(short, long, default_value = "0")]
+    threshold: f32,
+
+    // By default postfix will be used after file name
+    /// Output file
+    #[structopt(short, long, parse(from_os_str))]
+    output: Option<PathBuf>,
+
+    /// File to process
+    #[structopt(name = "FILE", parse(from_os_str), required = true)]
+    file: PathBuf,
+}
+
 fn main() {
-    let matches = App::new("Mdxlroptimizer")
-        .version(crate_version!())
-        .about("Tool for optimizing mdx files.")
-        .author("Nebula Venus (Github)")
-        .arg(Arg::with_name("log")
-            .help("Writes everything into a log file")
-            .long("log"))
-        .arg(Arg::with_name("outside")
-            .help("Delete redundant frames but outside anim sequences")
-            .long("outside"))
-        .arg(Arg::with_name("linearize")
-            .help("Converts hermite/bezier to linear. Simplify keyframes")
-            .long("linearize"))
-        .arg(Arg::with_name("threshold")
-            .takes_value(true)
-            .short("t")
-            .long("threshold"))
-        .subcommand(SubCommand::with_name("optimize")
-                        .about("Optimize mdl file")
-                        .arg(
-                            Arg::with_name("input")
-                                .help("the file to optimize")
-                                .index(1)
-                                .required(true)
-                        ),
-        )
-        .get_matches();
+    let opt = Opt::from_args();
+    info!("{:#?}", opt);
 
-    let log = matches.is_present("log");
-    setup_logger(log);
-    info!("Log is present? {}", log);
+    // Setup logging
+    setup_logger(opt.log);
 
-    let mut threshold = 0f32;
-    if let Some(th) = matches.value_of("threshold") {
-        let new_th = th.parse::<f32>()
-            .expect("entered threshold value is not correct");
-        if new_th.is_sign_negative() {
-            warn!("Threshold can't be negative, default value will be used");
-        } else {
-            threshold = new_th;
-        }
-    }
-    info!("Threshold value: {}", threshold);
-
-    let outside = matches.is_present("outside");
-    info!("Outside is present? {}", outside);
-    let linearize = matches.is_present("linearize");
-    info!("Linearize is present? {}", linearize);
-
-    if let Some(ref matches) = matches.subcommand_matches("optimize") {
-        let file = matches.value_of("input").unwrap();
-        info!("Processing file with name: {}", file);
-        parse_optimize_model(file.as_ref(), threshold, outside, linearize);
-    }
+    info!("Processing file with name: {:?}", opt.file);
+    parse_optimize_model(opt.file.as_ref(), opt.threshold, opt.outside, opt.linearize);
 }

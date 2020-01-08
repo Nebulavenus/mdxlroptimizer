@@ -1,7 +1,7 @@
-use std::ops::RangeInclusive;
-use nebula_mdx::MDLXModel;
-use nebula_mdx::chunks::BytesTotalSize;
 use crate::macros::*;
+use nebula_mdx::chunks::BytesTotalSize;
+use nebula_mdx::MDLXModel;
+use std::ops::RangeInclusive;
 
 pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, outside: bool) {
     let mut special_frames = Vec::<u32>::new();

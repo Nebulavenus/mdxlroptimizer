@@ -1,7 +1,7 @@
 [package]
 name = "mdxlroptimizer"
 version = "0.1.0"
-authors = ["Nebula Venus <6595784+Nebulavenus@users.noreply.github.com>"]
+authors = ["Nebula Venus (Github)"]
 edition = "2018"
 
 [profile.release]
@@ -13,5 +13,5 @@ opt-level = 'z'
 [dependencies]
 log = "0.4.8"
 flexi_logger = { version = "0.14.5", default_features = true }
-clap = "2.33.0"
+structopt = "0.3.7"
 nebula-mdx = { git = "https://github.com/Nebulavenus/nebula-mdx.git", tag = "0.1.0" }

@@ -8,26 +8,26 @@ Currently works only for 1.26 patch. Support for new patches planned.
 ### Usage
 ```
 USAGE:
-    mdxlroptimizer.exe [FLAGS] [OPTIONS] [SUBCOMMAND]
+    mdxlroptimizer.exe [FLAGS] [OPTIONS] <FILE>
 
 FLAGS:
     -h, --help         Prints help information
-        --linearize    Converts hermite/bezier to linear. Simplify keyframes
-        --log          Writes everything into a log file
-        --outside      Delete redundant frames but outside anim sequences
+        --linearize    Converts Hermite/Bezier interpolation to Linear
+        --log          Log everything into a file
+        --outside      Deletes keyframes outside of animation sequences
     -V, --version      Prints version information
 
 OPTIONS:
-    -t, --threshold <threshold>
+    -o, --output <output>          Output file
+    -t, --threshold <threshold>    Similar keyframes with a threshold difference [default: 0]
 
-SUBCOMMANDS:
-    help        Prints this message or the help of the given subcommand(s)
-    optimize    Optimize mdl file
+ARGS:
+    <FILE>    File to process
 ```
 
 ### Example
 ```
-mdxlroptimizer --linearize --threshold 0.01 optimize <file_name> | druidcat.mdx
+mdxlroptimizer --linearize --threshold 0.01 <file_name> | druidcat.mdx
 ```
 It produces a file with postfix <file_name>_optimized.mdx
 
