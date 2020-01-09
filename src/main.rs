@@ -12,6 +12,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
+use took::Timer;
 
 mod macros;
 mod optimizer;
@@ -27,13 +28,19 @@ pub fn parse_optimize_model(path: &Path, threshold: f32, outside: bool, lineariz
     let original_bytes_len = bytes.len();
 
     // Read mdx file into struct
+    let mut timer = Timer::new();
     let mut model = MDLXModel::read_mdx_file(bytes).unwrap();
+    info!("Deserializing mdx file! Took {}", timer.took());
 
     // Optimize model
+    timer = Timer::new();
     optimize_model(&mut model, threshold, linearize, outside);
+    info!("Optimizing mdx file! Took {}", timer.took());
 
     // Write mdx file into bytes vec
+    timer = Timer::new();
     let new_bytes = MDLXModel::write_mdx_file(model).unwrap();
+    info!("Serializing mdx file! Took {}", timer.took());
 
     let new_bytes_len = new_bytes.len();
 
@@ -43,11 +50,13 @@ pub fn parse_optimize_model(path: &Path, threshold: f32, outside: bool, lineariz
     );
 
     // Write bytes
+    timer = Timer::new();
     let new_file_name =
         String::from(file_name.to_str().unwrap()) + String::from("_optimized.mdx").as_ref();
 
     info!("Writing data into file name: {}", &new_file_name);
     fs::write(new_file_name, new_bytes).unwrap();
+    info!("Writing bytes into mdx file! Took {}", timer.took());
 }
 
 fn setup_logger(log: bool) {
