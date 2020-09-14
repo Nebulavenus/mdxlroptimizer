@@ -1,4 +1,4 @@
-use crate::macros::*;
+use crate::traits::{InRangeFrames, OptimizeFrames};
 use nebula_mdx::chunks::BytesTotalSize;
 use nebula_mdx::MDLXModel;
 use std::ops::RangeInclusive;
@@ -16,8 +16,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
     if model.bone_chunk.is_some() {
         let bones = model.bone_chunk.as_mut().unwrap();
         for bone in bones.data.iter_mut() {
-            if bone.node.geoset_translation.is_some() {
-                let geoset = bone.node.geoset_translation.as_mut().unwrap();
+            if bone.node.translation.is_some() {
+                let geoset = bone.node.translation.as_mut().unwrap();
                 if outside {
                     geoset.in_range_frames(anim_frame_ranges.clone());
                 } else {
@@ -25,8 +25,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
                     geoset.optimize(special_frames.clone(), threshold, linearize);
                 }
             }
-            if bone.node.geoset_rotation.is_some() {
-                let geoset = bone.node.geoset_rotation.as_mut().unwrap();
+            if bone.node.rotation.is_some() {
+                let geoset = bone.node.rotation.as_mut().unwrap();
                 if outside {
                     geoset.in_range_frames(anim_frame_ranges.clone());
                 } else {
@@ -34,8 +34,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
                     geoset.optimize(special_frames.clone(), threshold, linearize);
                 }
             }
-            if bone.node.geoset_scaling.is_some() {
-                let geoset = bone.node.geoset_scaling.as_mut().unwrap();
+            if bone.node.scaling.is_some() {
+                let geoset = bone.node.scaling.as_mut().unwrap();
                 if outside {
                     geoset.in_range_frames(anim_frame_ranges.clone());
                 } else {
@@ -51,8 +51,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
     if model.helper_chunk.is_some() {
         let helpers = model.helper_chunk.as_mut().unwrap();
         for helper in helpers.data.iter_mut() {
-            if helper.node.geoset_translation.is_some() {
-                let geoset = helper.node.geoset_translation.as_mut().unwrap();
+            if helper.node.translation.is_some() {
+                let geoset = helper.node.translation.as_mut().unwrap();
                 if outside {
                     geoset.in_range_frames(anim_frame_ranges.clone());
                 } else {
@@ -60,8 +60,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
                     geoset.optimize(special_frames.clone(), threshold, linearize);
                 }
             }
-            if helper.node.geoset_rotation.is_some() {
-                let geoset = helper.node.geoset_rotation.as_mut().unwrap();
+            if helper.node.rotation.is_some() {
+                let geoset = helper.node.rotation.as_mut().unwrap();
                 if outside {
                     geoset.in_range_frames(anim_frame_ranges.clone());
                 } else {
@@ -69,8 +69,8 @@ pub fn optimize_model(model: &mut MDLXModel, threshold: f32, linearize: bool, ou
                     geoset.optimize(special_frames.clone(), threshold, linearize);
                 }
             }
-            if helper.node.geoset_scaling.is_some() {
-                let geoset = helper.node.geoset_scaling.as_mut().unwrap();
+            if helper.node.scaling.is_some() {
+                let geoset = helper.node.scaling.as_mut().unwrap();
                 if outside {
                     geoset.in_range_frames(anim_frame_ranges.clone());
                 } else {
